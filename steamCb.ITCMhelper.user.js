@@ -1,0 +1,83 @@
+// ==UserScript==
+// @name         steamCb ITCM Helper
+// @namespace    steamCb
+// @version      0.1
+// @description  Load steam game information and make charts.
+// @author       narci <jwch11@gmail.com>
+// @match        *://itcm.co.kr/*
+// @require      http://code.jquery.com/jquery-3.2.1.min.js
+// @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @require      http://code.jquery.com/jquery-migrate-3.0.0.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/spin.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
+// @updateURL    https://github.com/NarciSource/steamCb.js
+// @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.ITCMhelper.user.js
+// @connect      cdn.steam.tools
+// @connect      api.isthereanydeal.com
+// @connect      api.steamcardexchange.net
+// @connect      spin.js.org
+// @grant        none
+// @license	     MIT
+// ==/UserScript==
+
+
+
+'use strict';
+
+$("head").append(`<style type="text/css">
+                    .highlight {color:#137ccf;}
+                    </style>`);
+var steamCb;
+if( $(location).attr('href').match(/itcm.co.kr/)) {
+
+    // Create a pop-up access button at the top
+    $(`<li><a class="login_A eevee">
+            <label id="lb-chart-make" style="cursor:pointer">스팀시비</label>
+            <i title="Pop-Up" class="xi-toggle-on highlight" for="cb1"/>
+        </a></li>`)
+            .insertBefore($('.first_login'))
+            .children().children().first()
+                .click(function() {
+                    if(!steamCb) {
+                        steamCb = new $.SteamCb();
+                        $(".column_login").after(steamCb.el);
+                    }
+
+                    // If pop-up is checked
+                    if($(this).next().hasClass("xi-toggle-on")) {
+                        steamCb.popUp({width:550, height:750});
+                    } else {
+                        steamCb.popDelete();
+                    }
+                })
+            .next()
+                .attr("style","cursor:pointer;margin:-3px")
+                .click(function() {
+                    $(this).toggleClass("xi-toggle-on")
+                            .toggleClass("highlight")
+                            .toggleClass("xi-toggle-off");
+                });
+        
+        
+            
+    // Extract the game list of ITCM.
+    if( $('.steam_read_selected').length) {
+        $('<div align="right"><button id="takeITCMchart" style="cursor:pointer">추출</button></div>')
+            .insertBefore($('.steam_read_selected table'))
+            .click(() => {
+                let gids = $('.steam_read_selected tbody .app > .item_image')
+                            .map((idx, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
+                            .toArray();
+
+                steamCb.addGames(gids);
+            })
+            .children().css({"background-color":"#333",
+                            "border":"2px solid #333",
+                            "width":"90px",
+                            "padding" : "5px 10x",
+                            "display" : "inline-block",
+                            "font-weight":"bold",
+                            "color":"#FFF"});
+    }
+}
