@@ -58,10 +58,7 @@
 
                 $cb_header.find("select")
                         .on("click", function() {
-                            console.log(this.value);
-                            changeStyle(this.value);
-                        console.log(theme);
-                        });
+                            changeStyle(this.value); });
 
                 /* Copy to clipboard */
                 $cb_aside.find("button.cb-aside-copyToClip")
@@ -352,6 +349,8 @@ var themeCollection = function(arg) {
                             width : 80px;
                             height : calc(100% - 200px);
                             padding : 10px;
+                            overflow-x : hidden;
+                            overflow-y : auto;
                         }
                         #cb-message {
                             clear : both;
