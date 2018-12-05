@@ -68,7 +68,7 @@
                 return $.ajax({ //Until now, get all appids and their names.
                     //or replace http://api.steampowered.com/ISteamApps/GetAppList/v0002/ 
                     url: "http://api.steampowered.com/ISteamApps/GetAppList/v0001/?format=json"}); },
-            getSteamworksPrice = (appids, opt) => { //multiple, filter, but only price
+            getSteamworksPrice = (appids, opt) => { //multiple, filter, but only price, Access-Control-Allow-Origin problem
                 opt = opt || {currency:"kr",language:"kr"};
                 return $.ajax({
                     url: "https://store.steampowered.com/api/appdetails?appids="+appids.join()+"&cc="+opt.currency+"&l="+opt.language+"&filters=price_overview"});}
@@ -133,7 +133,7 @@
                     
                     .then(([gids, ginfo_bundle, plains]) => {
                         /* load information */
-                        var promises = [getSteamworksPrice(gids), //1)price from steamworks
+                        var promises = [getITADPrice(plains.join()), //1)crrent price
                                         getITADInfo(plains.join()), //2)additional information
                                         getITADLowest(plains.join()), //3)lowest price
                                         getITADBundles(plains.join())].map(promise =>  //4)number of bundles
@@ -147,7 +147,7 @@
                                     let plain = ginfo.plain;
 
                                     if(res_price.success) {
-                                        ginfo.retail_price = res_price.d[gid].data.price_overview.final_formatted;
+                                        ginfo.retail_price = res_price.d.data[plain].list[0].price_new;
                                     } else {
                                         console.error("Can not read the price information. "+ 
                                                         res_price.err.status + " " + res_price.err.statusText);
@@ -183,7 +183,7 @@
                                 });
 
                                 return ginfo_bundle; }) })
-                    .catch(err => console.err(err));
+                    .catch(err => console.error(err));
                 /* return ginfo_bundle */ },
             
             gidSelector = function(rqst_gids) {

@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.1.17 - 2018-12-05
+ * steamCb - v0.1.18 - 2018-12-05
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -56,6 +56,13 @@
                         .on("click", function() { 
                             addTable(); });
 
+                $cb_header.find("select")
+                        .on("click", function() {
+                            console.log(this.value);
+                            changeStyle(this.value);
+                        console.log(theme);
+                        });
+
                 /* Copy to clipboard */
                 $cb_aside.find("button.cb-aside-copyToClip")
                         .on("click", function () {
@@ -84,7 +91,7 @@
                 /* Erase the trashbox */
                 $cb_trashbox.find("tbody.cb-connectedSortable")
                         .on("mouseenter", function() { 
-                            $(this) .css("cssText", "background: #36F")
+                            $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
                                     .prev().text("비우기"); })
                         .on("mouseleave", function() {     
                             $(this) .css("cssText", "background: transparent")
@@ -96,6 +103,9 @@
 
                 window.console.log = function(msg) {
                     $cb_message.append(msg + "<br>");
+                };
+                window.console.error = function(msg) {
+                    $cb_message.append(`<font color="red">` + msg + `</font>` + "<br>");
                 };
             },
             popUp = function(arg) {
@@ -118,7 +128,7 @@
             },
             popDelete = function() {
                 $steamcb.dialog("destroy");
-            }
+            },
             addTable = function() {
                 const $table = $(theme.outline.table).clone();
                 
@@ -130,9 +140,9 @@
                       .find("th")
                         .attr("style", theme.style.th)
                       .first()
-                        .attr("style", theme.style.thf)
+                        .attr("style", theme.style.th+theme.style.thf)
                       .nextAll().last()
-                        .attr("style", theme.style.thl);
+                        .attr("style", theme.style.th+theme.style.thl);
                         
                 $table.find("tbody")
                         .addClass("cb-connectedSortable")
@@ -169,66 +179,69 @@
                 $cb_header.append(spinner.el);
 
                 $.GinfoBuilder
-                        .build(gids)
-                        .then(([gids, ginfo_bundle]) => {
-                            gids.forEach(gid => {
-                                let $record = $(theme.outline.record).clone();
+                    .build(gids)
+                    .then(([gids, ginfo_bundle]) => {
+                        gids.forEach(gid => {
+                            let $record = $(theme.outline.record).clone();
 
-                                let $data = $record.find("td");
-                                
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_store)
-                                            .text(ginfo_bundle[gid].name + 
-                                                (ginfo_bundle[gid].is_dlc===true? " (dlc)":""))
-                                            .htmlTo($data.eq(0));
+                            let $data = $record.find("td");
+                            
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_store)
+                                        .text(ginfo_bundle[gid].name + 
+                                            (ginfo_bundle[gid].is_dlc===true? " (dlc)":""))
+                                        .htmlTo($data.eq(0));
 
-                                
-                                if(ginfo_bundle[gid].trading_cards === "?") {
-                                    $data.eq(1).text("?");
-                                } else if(ginfo_bundle[gid].trading_cards) {
-                                    $("<a/>").attr("href", ginfo_bundle[gid].url_cards)
-                                                .text("❤")
-                                                .htmlTo($data.eq(1));
-                                } else {
-                                    $data.eq(1).text("-");
-                                }
+                            
+                            if(ginfo_bundle[gid].trading_cards === "?") {
+                                $data.eq(1).text("?");
+                            } else if(ginfo_bundle[gid].trading_cards) {
+                                $("<a/>").attr("href", ginfo_bundle[gid].url_cards)
+                                            .text("❤")
+                                            .htmlTo($data.eq(1));
+                            } else {
+                                $data.eq(1).text("-");
+                            }
 
-                                if(ginfo_bundle[gid].achievements === "?") {
-                                    $data.eq(2).text("?");
-                                } else if(ginfo_bundle[gid].achievements) {
-                                    $("<a/>").attr("href", ginfo_bundle[gid].url_archv)
-                                                .text("▨")
-                                                .htmlTo($data.eq(2));
-                                } else {
-                                    $data.eq(2).text("-");
-                                }
-                                            
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_bundles)
-                                            .text(ginfo_bundle[gid].bundles)
-                                            .htmlTo($data.eq(3));
-                                            
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_history)
-                                            .text("$ "+ginfo_bundle[gid].lowest_price)
-                                            .htmlTo($data.eq(4));
-                                            
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_price_info)
-                                            .text(ginfo_bundle[gid].retail_price)
-                                            .htmlTo($data.eq(5));
+                            if(ginfo_bundle[gid].achievements === "?") {
+                                $data.eq(2).text("?");
+                            } else if(ginfo_bundle[gid].achievements) {
+                                $("<a/>").attr("href", ginfo_bundle[gid].url_archv)
+                                            .text("▨")
+                                            .htmlTo($data.eq(2));
+                            } else {
+                                $data.eq(2).text("-");
+                            }
+                                        
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_bundles)
+                                        .text(ginfo_bundle[gid].bundles)
+                                        .htmlTo($data.eq(3));
+                                        
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_history)
+                                        .text("$ "+ginfo_bundle[gid].lowest_price)
+                                        .htmlTo($data.eq(4));
+                                        
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_price_info)
+                                        .text("$ "+ginfo_bundle[gid].retail_price)
+                                        .htmlTo($data.eq(5));
 
-                                            
-                                $data.attr("style", theme.style.td)
-                                    .first().attr("style", theme.style.tdf)
-                                    .nextAll().last().attr("style", theme.style.tdl);
+                                        
+                            $data.attr("style", theme.style.td)
+                                .first().attr("style", theme.style.td+theme.style.tdf)
+                                .nextAll().last().attr("style", theme.style.td+theme.style.tdl);
 
-                                $cb_article.find("tbody").last()
-                                        .append($record);
-                            });
-                            spinner.stop();
-                        })
-                        .catch(error => {
-                            console.log(error);
-                            spinner.stop(); 
+                            $cb_article.find("tbody").last()
+                                    .append($record);
                         });
+                        spinner.stop();
+                    })
+                    .catch(error => {
+                        console.log(error);
+                        spinner.stop(); 
+                    });
             };
+            changeStyle = function(rqst_style) {
+                theme = themeCollection(rqst_style);
+            }
             
         setLayout();
         setEvent();
@@ -259,6 +272,10 @@ var themeCollection = function(arg) {
                         <div id="cb-header">
                             <label>검색  </label>
                             <input class="cb-header-searchBar" placeholder=" Appid 입력 후 엔터"/>
+                            <select>
+                                <option>eevee</option>
+                                <option>sg</option>
+                            </select>
                             <button class="cb-header-addTable">테이블 추가</button>
                         </div>
 
@@ -299,7 +316,7 @@ var themeCollection = function(arg) {
                         #steamcb button {
                             cursor : pointer;
                             background-color : transparent;
-                            border : 1px solid #36F;
+                            border : 1px solid #CCC;
                         }
                         #steamcb button:hover {
                             color: rgba(255, 255, 255, 0.85); 
@@ -316,6 +333,11 @@ var themeCollection = function(arg) {
                             cols : 40; rows : 5;
                         }
                         #cb-header button.cb-header-addTable {
+                            float : right;
+                        }
+                        #cb-header select {
+                            width : 13px;
+                            height : 21px;
                             float : right;
                         }
                         #cb-article {
@@ -360,9 +382,7 @@ var themeCollection = function(arg) {
                         }
                         </style>` },
         sg_style = {
-            table : `background-color : transparent;
-                    border-collapse : collapse;
-                    border : .5px solid rgb(210,214,224);
+            table :`border-collapse : collapse;
                     color : rgb(70,86,112);
                     font-family : Arial, sans-serif;
                     font-size : 13px;
@@ -370,29 +390,28 @@ var themeCollection = function(arg) {
                     line-height : 20.15px;
                     margin : 0px 0px 15px;
                     table-layout : fixed;
-                    text-align : left;
-                    text-decoration : none;
-                    text-indent : 0px;
-                    text-transform : none;
-                    vertical-align : baseline;
-                    word-spacing : 0px;`,
+                    text-shadow : 1px 1px rgba(255,255,255,0.94);`,
             thead : `background-color:rgb(232,234,239);
                     border-bottom : 1px solid rgb(70,86,112);
                     font-weight:700;
                     line-height:20.15px;`,
-            th : `border : 1px solid rgb(210,214,224);
+            tfoot : ``,
+            th : `  border : 1px solid rgb(210,214,224);
                     padding : 3px 10px 3px 10px;
                     text-align:center;`, 
+            thf : ` text-align : left;`,
+            thl : ` text-align : center;`,
             tbody : ``,
-            td : `border : 1px solid rgb(210,214,224);
+            td : `  border : 1px solid rgb(210,214,224);
                     padding : 3px 10px 3px 10px;
-                    text-align:center;` },
+                    text-align:center;`,
+            tdf : ` text-align:left;`,
+            tdl : ``},
         eevee_style = {
             table : `border-collapse : collapse;
                     color : #2c2f32;
                     font-family : Arial, sans-serif;
                     margin : 0px 0px 15px;
-                    text-align : center;
                     text-shadow : 1px 1px rgba(255,255,255,0.94);`,
             thead : `background-color: #ffdb52;
                     border-top : 1px solid #d7a44f;
@@ -401,43 +420,31 @@ var themeCollection = function(arg) {
                     line-height : 25.15px;`,
             tfoot : ``,
             th : `  border : 1px solid #d7a44f;
-                    padding : 3px 10px;`,
-            thf : ` border : 1px solid #d7a44f;
-                    border-left : 0px;
                     padding : 3px 10px;
+                    text-align : center;`,
+            thf : ` border-left : 0px;
                     text-align : left;`,
-            thl : ` border : 1px solid #d7a44f;
-                    border-right : 0px;
-                    padding : 3px 10px;`,
-            tbody : `background-color : #fdf0c8;
-                    line-height : 20.15px;
+            thl : ` border-right : 0px;`,
+            tbody : `line-height : 20.15px;
                     font-weight : 400;
                     color : rgb(70,86,112);`,
-            td : `  border : 1px solid #fdcf83;
-                    padding : 3px 10px;`,
-            tdf : ` border : 1px solid #fdcf83;
-                    border-left : 0px;
-                    padding : 3px 10px;
-                    text-align : left;`,
-            tdl : ` width : 60px;
+            td : `  background-color : #fdf0c8;
                     border : 1px solid #fdcf83;
-                    border-right : 0px;
                     padding : 3px 10px;
-                    text-align : right;`};
+                    text-align : center;`,
+            tdf : ` border-left : 0px;
+                    text-align : left;`,
+            tdl : ` border-right : 0px;`};
 
-    if(typeof arg === "object") {
-        return Object.assign(arg || {}, {
-            outline : Object.assign({}, popup_outline, table_outline),
-            style : Object.assign({}, default_style, sg_style) });
-    }
-    if(arg === "eevee") {
-        return {
-            outline : Object.assign({}, popup_outline, table_outline),
-            style : Object.assign({}, default_style, eevee_style) };
-    }
-    if(arg === "sg") {
-        return {
-            outline : Object.assign({}, popup_outline, table_outline),
-            style : Object.assign({}, default_style, sg_style) };
+    switch(arg) {
+        case "eevee":
+            return {
+                outline : Object.assign({}, popup_outline, table_outline),
+                style : Object.assign({}, default_style, eevee_style) };
+        case "sg":
+        default:
+            return {
+                outline : Object.assign({}, popup_outline, table_outline),
+                    style : Object.assign({}, default_style, sg_style) };
     }
 };
