@@ -33,14 +33,14 @@ if( $(location).attr('href').match(/itcm.co.kr/)) {
 
     // Create a pop-up access button at the top
     $(`<li><a class="login_A eevee">
-            <label id="lb-chart-make" style="cursor:pointer">스팀시비</label>
+            <label id="lb-chart-make" style="cursor:pointer">차트만들기</label>
             <i title="Pop-Up" class="xi-toggle-on highlight" for="cb1"/>
         </a></li>`)
             .insertBefore($('.first_login'))
             .children().children().first()
                 .click(function() {
                     if(!steamCb) {
-                        steamCb = new $.SteamCb();
+                        steamCb = new SteamCb();
                         $(".column_login").after(steamCb.el);
                     }
 

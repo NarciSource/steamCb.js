@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.1.18 - 2018-12-05
+ * steamCb - v0.1.19 - 2018-12-05
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -7,253 +7,258 @@
 
 
 
-(function($) {
-    $.fn.htmlTo = function(elem) { this.each(function() { $(elem).html($(this)); }); }
+$.fn.htmlTo = function(elem) { this.each(function() { $(elem).html($(this)); }); }
 
-    /**
-     * @class       SteamCb
-     * @classdesc   
-     */
-    $.SteamCb = function(arg) {
-        const default_options = {
-            width: 550, height: 770,
-            theme : "eevee",    //sg
-        };
+/**
+ * @class       SteamCb
+ * @classdesc   
+ */
+function SteamCb() {
+    this.init();
+    console.log("New SteamCb");
+};
+SteamCb.prototype = function() {
+    var setLayout = function(theme) {
+            let $document = $(theme.outline.base); //new
 
-        //private
-        var option, theme,
-            $steamcb, $cb_header, $cb_article, $cb_aside, $cb_message, $cb_trashbox;
- 
-        var setLayout = function() {
-                option = $.extend(arg || {}, default_options);
-                theme = themeCollection(option.theme);
+            let dom = { //dom object
+                $document : $document,
+                $head : $document.find("#cb-header"),
+                $article : $document.find("#cb-article"),
+                $aside : $document.find("#cb-aside"),
+                $message : $document.find("#cb-message"),
+                $trashbox : $document.find("#cb-trashbox")
+            };
+            setEvent(dom, theme);
+            return dom;
+        },
+        setEvent = function(dom, theme) {
 
-                $steamcb = $(theme.outline.base);
-                $cb_header = $steamcb.find("#cb-header");
-                $cb_article = $steamcb.find("#cb-article");
-                $cb_aside = $steamcb.find("#cb-aside");
-                $cb_message = $steamcb.find("#cb-message");
-                $cb_trashbox = $steamcb.find("#cb-trashbox");
+            /* Connect the tables and apply the sortable */
+            dom.$document.find(".cb-connectedSortable")
+                    .sortable({ cancel: ".cb-sortable-disabled",
+                        connectWith: ".cb-connectedSortable" });
 
-                $("head").append($(theme.style.header));
-            },
-            setEvent = function() {
-                /* Connect the tables and apply the sortable */
-                $steamcb.find(".cb-connectedSortable")
-                        .sortable({ cancel: ".cb-sortable-disabled",
-                            connectWith: ".cb-connectedSortable" });
+            /* Search bar */
+            dom.$head.find("input.cb-header-searchBar")
+                    .on("keydown", function (key) {
+                        if(key.keyCode == 13) {
+                            let gids = $(this).val().split(',').map(gid => gid.trim());
 
-                /* Search bar */
-                $cb_header.find("input.cb-header-searchBar")
-                        .on("keydown", function (key) {
-                            if(key.keyCode == 13) {
-                                let gids = $(this).val().split(',').map(gid => gid.trim());
+                            addGames(dom.$article, dom.$head, theme, gids); }})
+                    .attr("disabled","disabled");
 
-                                addGames(gids); }});
+            
+            /* Preheat GinfoBuilder */
+            GinfoBuilder
+                    .preheat().then(success =>{ //async
+                        if(success) {
+                            dom.$head.find("input.cb-header-searchBar")
+                                    .removeAttr("disabled");} });
 
-                /* Add a table */
-                $cb_header.find("button.cb-header-addTable")
-                        .on("click", function() { 
-                            addTable(); });
+            /* Add a table */
+            dom.$head.find("button.cb-header-addTable")
+                    .on("click", function() { 
+                        addTable(dom.$article, theme); });
 
-                $cb_header.find("select")
-                        .on("click", function() {
-                            changeStyle(this.value); });
+            /* Select a theme */
+            dom.$head.find("select")
+                    .on("click", function() {
+                        theme = themeCollection(this.value); });
 
-                /* Copy to clipboard */
-                $cb_aside.find("button.cb-aside-copyToClip")
-                        .on("click", function () {
-                            ((el) => {
-                                var body = document.body, range, sel;
-                                if (document.createRange && window.getSelection) {
-                                    range = document.createRange();
-                                    sel = window.getSelection();
-                                    sel.removeAllRanges();
-                                    try {            
-                                        range.selectNodeContents(el);
-                                        sel.addRange(range);
-                                    } catch (e) {
-                                        range.selectNode(el);
-                                        sel.addRange(range);
-                                    }
-                                } else if (body.createTextRange) {
-                                    range = body.createTextRange();
-                                    range.moveToElementText(el);
-                                    range.select();
+            /* Copy to clipboard */
+            dom.$aside.find("button.cb-aside-copyToClip")
+                    .on("click", function () {
+                        ((el) => {
+                            var body = document.body, range, sel;
+                            if (document.createRange && window.getSelection) {
+                                range = document.createRange();
+                                sel = window.getSelection();
+                                sel.removeAllRanges();
+                                try {            
+                                    range.selectNodeContents(el);
+                                    sel.addRange(range);
+                                } catch (e) {
+                                    range.selectNode(el);
+                                    sel.addRange(range);
                                 }
-                            })( $cb_article[0]);
-                            console.log("Copy");
-                            document.execCommand("Copy");});
-                
-                /* Erase the trashbox */
-                $cb_trashbox.find("tbody.cb-connectedSortable")
-                        .on("mouseenter", function() { 
-                            $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
-                                    .prev().text("비우기"); })
-                        .on("mouseleave", function() {     
-                            $(this) .css("cssText", "background: transparent")
-                                    .prev().text("휴지통"); })
-                $cb_trashbox.find("tr.cb-sortable-disabled")
-                        .on("click", function() { 
-                            $(this).siblings(":not(tr.cb-sortable-disabled)").remove();});
+                            } else if (body.createTextRange) {
+                                range = body.createTextRange();
+                                range.moveToElementText(el);
+                                range.select();
+                            }
+                        })( dom.$article[0]);
+                        console.log("Copy");
+                        document.execCommand("Copy");});
+            
+            /* Erase the trashbox */
+            dom.$trashbox.find("tbody.cb-connectedSortable")
+                    .on("mouseenter", function() { 
+                        $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
+                                .prev().text("비우기"); })
+                    .on("mouseleave", function() {     
+                        $(this) .css("cssText", "background: transparent")
+                                .prev().text("휴지통"); })
+            dom.$trashbox.find("tr.cb-sortable-disabled")
+                    .on("click", function() { 
+                        $(this).siblings(":not(tr.cb-sortable-disabled)").remove();});
 
-
+            /* Intercept Console */
+            if(true) {
                 window.console.log = function(msg) {
-                    $cb_message.append(msg + "<br>");
+                    dom.$message.append(msg + "<br>");
                 };
                 window.console.error = function(msg) {
-                    $cb_message.append(`<font color="red">` + msg + `</font>` + "<br>");
+                    dom.$message.append(`<font color="red">` + msg + `</font>` + "<br>");
                 };
-            },
-            popUp = function(arg) {
-                arg = arg || {width:550, height:750}; //default
-
-                if(!$steamcb.hasClass("ui-dialog")) {
-                    $steamcb
-                        .dialog({
-                            resizable: true,
-                            autoOpen: false,
-                            closeText: "",
-                            show: { effect: "blind", duration: 2000 },
-                            hide: { effect: "explode", duration: 2000 },
-                            width: arg.width, height: arg.height })
-                        .dialog("widget")
-                        .draggable("option", "containment", "none");
-                }
-
-                $steamcb.dialog("open");
-            },
-            popDelete = function() {
-                $steamcb.dialog("destroy");
-            },
-            addTable = function() {
-                const $table = $(theme.outline.table).clone();
-                
-                $table  .attr("style", theme.style.table)
-                        .appendTo($cb_article);
-
-                $table.find("thead")
-                        .attr("style", theme.style.thead)
-                      .find("th")
-                        .attr("style", theme.style.th)
-                      .first()
-                        .attr("style", theme.style.th+theme.style.thf)
-                      .nextAll().last()
-                        .attr("style", theme.style.th+theme.style.thl);
-                        
-                $table.find("tbody")
-                        .addClass("cb-connectedSortable")
-                        .sortable({connectWith: ".cb-connectedSortable"})
-                        .attr("style", theme.style.tbody);
-
-                console.log("A table has been added");
-            },
-            addGames = function(gids) {
-                if(!$cb_article.children("table").length) addTable();
-
-                const spinner_opts = {
-                    lines: 8, // The number of lines to draw
-                    length: 5, // The length of each line
-                    width: 9, // The line thickness
-                    radius: 16, // The radius of the inner circle
-                    scale: 0.35, // Scales overall size of the spinner
-                    corners: 1, // Corner roundness (0..1)
-                    color: '#000000', // CSS color or array of colors
-                    fadeColor: 'transparent', // CSS color or array of colors
-                    speed: 1, // Rounds per second
-                    rotate: 0, // The rotation offset
-                    animation: 'spinner-line-fade-quick', // The CSS animation name for the lines
-                    direction: 1, // 1: clockwise, -1: counterclockwise
-                    zIndex: 2e9, // The z-index (defaults to 2000000000)
-                    className: 'spinner', // The CSS class to assign to the spinner
-                    top: '-12px', // Top position relative to parent
-                    left: '270px', // Left position relative to parent
-                    shadow: '0 0 1px transparent', // Box-shadow for the lines
-                    position: 'relative' // Element positioning
-                    };
-
-                var spinner = new Spinner(spinner_opts).spin();
-                $cb_header.append(spinner.el);
-
-                $.GinfoBuilder
-                    .build(gids)
-                    .then(([gids, ginfo_bundle]) => {
-                        gids.forEach(gid => {
-                            let $record = $(theme.outline.record).clone();
-
-                            let $data = $record.find("td");
-                            
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_store)
-                                        .text(ginfo_bundle[gid].name + 
-                                            (ginfo_bundle[gid].is_dlc===true? " (dlc)":""))
-                                        .htmlTo($data.eq(0));
-
-                            
-                            if(ginfo_bundle[gid].trading_cards === "?") {
-                                $data.eq(1).text("?");
-                            } else if(ginfo_bundle[gid].trading_cards) {
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_cards)
-                                            .text("❤")
-                                            .htmlTo($data.eq(1));
-                            } else {
-                                $data.eq(1).text("-");
-                            }
-
-                            if(ginfo_bundle[gid].achievements === "?") {
-                                $data.eq(2).text("?");
-                            } else if(ginfo_bundle[gid].achievements) {
-                                $("<a/>").attr("href", ginfo_bundle[gid].url_archv)
-                                            .text("▨")
-                                            .htmlTo($data.eq(2));
-                            } else {
-                                $data.eq(2).text("-");
-                            }
-                                        
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_bundles)
-                                        .text(ginfo_bundle[gid].bundles)
-                                        .htmlTo($data.eq(3));
-                                        
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_history)
-                                        .text("$ "+ginfo_bundle[gid].lowest_price)
-                                        .htmlTo($data.eq(4));
-                                        
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_price_info)
-                                        .text("$ "+ginfo_bundle[gid].retail_price)
-                                        .htmlTo($data.eq(5));
-
-                                        
-                            $data.attr("style", theme.style.td)
-                                .first().attr("style", theme.style.td+theme.style.tdf)
-                                .nextAll().last().attr("style", theme.style.td+theme.style.tdl);
-
-                            $cb_article.find("tbody").last()
-                                    .append($record);
-                        });
-                        spinner.stop();
-                    })
-                    .catch(error => {
-                        console.log(error);
-                        spinner.stop(); 
-                    });
-            };
-            changeStyle = function(rqst_style) {
-                theme = themeCollection(rqst_style);
             }
+        },
+        popUp = function($document, arg) {
+            arg = arg || {width:550, height:750}; //default
             
-        setLayout();
-        setEvent();
-        console.log("new SteamCb");
+            if(!$document.hasClass("ui-dialog")) {
+                $document
+                    .dialog({
+                        resizable: true,
+                        autoOpen: false,
+                        closeText: "",
+                        show: { effect: "blind", duration: 2000 },
+                        hide: { effect: "explode", duration: 2000 },
+                        width: arg.width, height: arg.height })
+                    .dialog("widget")
+                    .draggable("option", "containment", "none");
+            }
 
-        return {
-            //public
-            el : $steamcb,
-            popUp : (arg) => popUp(arg),
-            popDelete : popDelete,
-            addTable : addTable,
-            addGames : (gids) => addGames(gids)
-        };
+            $document.dialog("open");
+        },
+        popDelete = function($document) {
+            $document.dialog("destroy");
+        },
+        addTable = function($article, theme) {
+            const $table = $(theme.outline.table).clone(); //new
+            
+            $table  .attr("style", theme.style.table)
+                    .appendTo($article);
+
+            $table.find("thead")
+                    .attr("style", theme.style.thead)
+                    .find("th")
+                    .attr("style", theme.style.th)
+                    .first()
+                    .attr("style", theme.style.th+theme.style.thf)
+                    .nextAll().last()
+                    .attr("style", theme.style.th+theme.style.thl);
+                    
+            $table.find("tbody")
+                    .addClass("cb-connectedSortable")
+                    .sortable({connectWith: ".cb-connectedSortable"})
+                    .attr("style", theme.style.tbody);
+
+            console.log("A table has been added");
+        },
+        addGames = function($article, $head, theme, gids) {
+            if(!$article.children("table").length) addTable($article, theme);
+
+            const spinner_opts = {
+                lines: 8, // The number of lines to draw
+                length: 5, // The length of each line
+                width: 9, // The line thickness
+                radius: 16, // The radius of the inner circle
+                scale: 0.35, // Scales overall size of the spinner
+                corners: 1, // Corner roundness (0..1)
+                color: '#000000', // CSS color or array of colors
+                fadeColor: 'transparent', // CSS color or array of colors
+                speed: 1, // Rounds per second
+                rotate: 0, // The rotation offset
+                animation: 'spinner-line-fade-quick', // The CSS animation name for the lines
+                direction: 1, // 1: clockwise, -1: counterclockwise
+                zIndex: 2e9, // The z-index (defaults to 2000000000)
+                className: 'spinner', // The CSS class to assign to the spinner
+                top: '-12px', // Top position relative to parent
+                left: '270px', // Left position relative to parent
+                shadow: '0 0 1px transparent', // Box-shadow for the lines
+                position: 'relative' // Element positioning
+                };
+
+            var spinner = new Spinner(spinner_opts).spin(); //new
+            $head.append(spinner.el);
+
+            GinfoBuilder //async
+                .build(gids)
+                .then(([gids, ginfo_bundle]) => {
+                    gids.forEach(gid => {
+                        let $record = $(theme.outline.record).clone(); //new
+
+                        let $data = $record.find("td");
+                        
+                        $("<a/>").attr("href", ginfo_bundle[gid].url_store)
+                                    .text(ginfo_bundle[gid].name + 
+                                        (ginfo_bundle[gid].is_dlc===true? " (dlc)":""))
+                                    .htmlTo($data.eq(0));
+
+                        
+                        if(ginfo_bundle[gid].trading_cards === "?") {
+                            $data.eq(1).text("?");
+                        } else if(ginfo_bundle[gid].trading_cards) {
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_cards)
+                                        .text("❤")
+                                        .htmlTo($data.eq(1));
+                        } else {
+                            $data.eq(1).text("-");
+                        }
+
+                        if(ginfo_bundle[gid].achievements === "?") {
+                            $data.eq(2).text("?");
+                        } else if(ginfo_bundle[gid].achievements) {
+                            $("<a/>").attr("href", ginfo_bundle[gid].url_archv)
+                                        .text("▨")
+                                        .htmlTo($data.eq(2));
+                        } else {
+                            $data.eq(2).text("-");
+                        }
+                                    
+                        $("<a/>").attr("href", ginfo_bundle[gid].url_bundles)
+                                    .text(ginfo_bundle[gid].bundles)
+                                    .htmlTo($data.eq(3));
+                                    
+                        $("<a/>").attr("href", ginfo_bundle[gid].url_history)
+                                    .text("$ "+ginfo_bundle[gid].lowest_price)
+                                    .htmlTo($data.eq(4));
+                                    
+                        $("<a/>").attr("href", ginfo_bundle[gid].url_price_info)
+                                    .text("$ "+ginfo_bundle[gid].retail_price)
+                                    .htmlTo($data.eq(5));
+
+                                    
+                        $data.attr("style", theme.style.td)
+                            .first().attr("style", theme.style.td+theme.style.tdf)
+                            .nextAll().last().attr("style", theme.style.td+theme.style.tdl);
+
+                        $article.find("tbody").last()
+                                .append($record);
+                    });
+                    spinner.stop();
+                })
+                .catch(error => {
+                    console.log(error);
+                    spinner.stop(); 
+                });
+        }
+
+    return {
+        //public
+        init : function() { 
+            this.theme = themeCollection("eevee"); //new
+            this.dom = setLayout(this.theme);
+            this.el = this.dom.$document;
+            $("head").append($(this.theme.style.header));
+        },
+        popUp : function(arg) { popUp(this.dom.$document, arg); },
+        popDelete : function() { popDelete(this.dom.$document); },
+        addTable : function() { addTable(this.dom.$article, this.theme); },
+        addGames : function(gids){ addGames(this.dom.$article, this.dom.$head, this.theme, gids);}
     };
-})(jQuery);
+}();
 
 
 
@@ -333,8 +338,8 @@ var themeCollection = function(arg) {
                             float : right;
                         }
                         #cb-header select {
-                            width : 13px;
-                            height : 21px;
+                            width : 19px;
+                            height : 19px;
                             float : right;
                         }
                         #cb-article {
@@ -444,6 +449,6 @@ var themeCollection = function(arg) {
         default:
             return {
                 outline : Object.assign({}, popup_outline, table_outline),
-                    style : Object.assign({}, default_style, sg_style) };
+                style : Object.assign({}, default_style, sg_style) };
     }
 };
