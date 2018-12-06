@@ -13,7 +13,7 @@ GinfoBuilder = (function() {
     class Ginfo {
         constructor({name = "?",
                     gid = "?",
-                    plain = "",
+                    plain = "?",
                     trading_cards = "?", 
                     achievements = "?",
                     retail_price = "?", 
@@ -76,17 +76,20 @@ GinfoBuilder = (function() {
     var getITAD = (url) => {
         const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af";
         return $.ajax({
-            url: url.replace('%key%',itad_api_key) }); },       
-        getITADPlain = function(gids) {
+            url: url.replace('%key%',itad_api_key) }); },
+        getITADPlainList = () => {
+            const store = "steam";
+            return getITAD("https://api.isthereanydeal.com/v01/game/plain/list/?key=%key%&shops="+store); },
+        getITADPlain = (gids) => {
             const store = "steam";
             return getITAD("https://api.isthereanydeal.com/v01/game/plain/id/?key=%key%&shop="+store+"&ids="+gids.map(item => "app/"+item).join()); },
-        getITADInfo = function(plains) {
+        getITADInfo = (plains) => {
             return getITAD("https://api.isthereanydeal.com/v01/game/info/?key=%key%&plains="+plains); },
-        getITADPrice = function(plains) { //It does not support Korean currency.
+        getITADPrice = (plains) => { //It does not support Korean currency.
             return getITAD("https://api.isthereanydeal.com/v01/game/prices/?key=%key%&plains="+plains+"&shops=steam"); },
-        getITADLowest = function(plains) {
+        getITADLowest = (plains) => {
             return getITAD("https://api.isthereanydeal.com/v01/game/lowest/?key=%key%&plains="+plains); },
-        getITADBundles = function(plains) {
+        getITADBundles = (plains) => {
             return getITAD("https://api.isthereanydeal.com/v01/game/bundles/?key=%key%&plains="+plains); };
 
 
@@ -100,91 +103,107 @@ GinfoBuilder = (function() {
             /* load applist */
             return getSteamworksAppList()
                 .then(res=> {
+                    res.applist.apps.app.forEach(app=> {
+                        meta[app.appid] = new Ginfo({name:app.name, gid:app.appid});
+                    });
+
                     console.log("Loads all steam applist.");
                     console.log("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
                                 res.applist.apps.app.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
 
-                    res.applist.apps.app
-                        .forEach(app=> {
-                            meta[app.appid] = new Ginfo({name:app.name, gid:app.appid});
-                        });
-
-                    return true; })
+                    return Promise.resolve(); })
                 .catch(err=> {
                     console.error("Steam api is inaccessible. "+ 
                                 err.status + " " + err.statusText);
-                    return false; });
+                    return Promise.reject("steam error"); })
+                    
+                .then(res=> getITADPlainList())
+                .then(res=> {
+                    Object.keys(res.data.steam).filter(gid => gid.match("app")).map(gid => {
+                        const appid = gid.match(/[0-9]+/);
+                        if(meta[appid]) 
+                            meta[appid].plain = res.data.steam[gid];
+                    });
+
+                    console.log("Loads itad steam game's plain list");
+                    
+                    return Promise.resolve();
+                })
+                .catch(err=> {
+                    if(err != "steam error") {
+                        console.error("ITAD api is inaccessible. "+ 
+                            err.status + " " + err.statusText);
+                    }
+                    return Promise.reject();
+                });
             },
 
         loadInfo = function([gids, ginfo_bundle]) { //promise
             if(gids.length===0) return Promise.resolve({/*empty*/});
-            else return getITADPlain(gids)
-                .then(plain_data => {
-                    /* load plain */
-                    let plains = gids.filter(gid => plain_data.data["app/"+gid]!==null).map(gid => {
-                        ginfo_bundle[gid].plain = plain_data.data["app/"+gid];
-                            return ginfo_bundle[gid].plain;
-                        } );
+            else {
+                let plains = gids.map(gid => ginfo_bundle[gid].plain);
 
-                    return ([gids, ginfo_bundle, plains]); })
-                .catch(err=> {
-                    console.error("Itad api is inaccessible. "+ 
-                                    err.status + " " + err.statusText);
-                    return ([gids, ginfo_bundle, [/*empty*/]]); })
-                
-                .then(([gids, ginfo_bundle, plains]) => {
-                    /* load information */
-                    var promises = [getITADPrice(plains.join()), //1)crrent price
-                                    getITADInfo(plains.join()), //2)additional information
-                                    getITADLowest(plains.join()), //3)lowest price
-                                    getITADBundles(plains.join())].map(promise =>  //4)number of bundles
-                                        promise.then(d => ({success: true, d}), 
-                                                    err => ({success: false, err})));
+                /* combine promise */
+                let promises = [getITADPrice(plains.join()), //1)crrent price
+                                getITADInfo(plains.join()), //2)additional information
+                                getITADLowest(plains.join()), //3)lowest price
+                                getITADBundles(plains.join())].map(promise =>  //4)number of bundles
+                                    promise.then(d => ({success: true, d}), 
+                                                err => ({success: false, err})));
+                /* load infomation */
+                return Promise.all(promises)
+                    .then(([res_price, res_info, res_lowest, res_bundles]) => {
+                        gids.forEach(gid => {
+                            let ginfo = ginfo_bundle[gid];
+                            let plain = ginfo.plain;
 
-                    return Promise.all( promises)
-                        .then(([res_price, res_info, res_lowest, res_bundles]) => {
-                            gids.forEach(gid => {
-                                let ginfo = ginfo_bundle[gid];
-                                let plain = ginfo.plain;
+                            if(plain === "?") return;
 
+                            try {
                                 if(res_price.success) {
                                     ginfo.retail_price = res_price.d.data[plain].list[0].price_new;
-                                } else {
-                                    console.error("Can not read the price information. "+ 
-                                                    res_price.err.status + " " + res_price.err.statusText);
-                                }
+                                } else throw "";
+                            }catch(e) {
+                                console.error("Can not read the price information.");
+                            }
 
+                            try {
                                 if(res_info.success) {
                                     ginfo.trading_cards = res_info.d.data[plain].trading_cards;
                                     ginfo.achievements = res_info.d.data[plain].achievements;
                                     ginfo.url_price_info = res_info.d.data[plain].urls.game;
-                                    ginfo.reviews = res_info.d.data[plain].reviews.steam; //{"perc_positive": 94,"total": 154,"text": "Very Positive","timestamp": 1543913493}
+                                    ginfo.reviews = res_info.d.data[plain].reviews.steam; //ex.{"perc_positive": 94,"total": 154,"text": "Very Positive","timestamp": 1543913493}
                                     ginfo.is_dlc = res_info.d.data[plain].is_dlc;
                                     ginfo.is_package = res_info.d.data[plain].is_package;
-                                } else {
-                                    console.error("Can not read the trading cards and achievemts informaion. "+ 
-                                                    res_info.err.status + " " + res_info.err.statusText);
-                                }
+                                } else throw "";
+                            }catch(e) {
+                                console.error("Can not read the trading cards and achievemts informaion.");
+                            }
 
+                            try {
                                 if(res_lowest.success) {
                                     ginfo.lowest_price = res_lowest.d.data[plain].price;
                                     ginfo.url_history = res_lowest.d.data[plain].urls.history;
-                                } else {
-                                    console.error("Can not read the lowest price information. "+ 
-                                                    res_info.err.status + " " + res_info.err.statusText);
-                                }
+                                } else throw "";
+                            }catch(e) {
+                                console.error("Can not read the lowest price information.");
+                            }
 
+                            try {
                                 if(res_bundles.success) {
                                     ginfo.bundles = res_bundles.d.data[plain].total;
                                     ginfo.url_bundles = res_bundles.d.data[plain].urls.bundles;
-                                }  else {
-                                    console.error("Can not read the number of bundles information. "+ 
-                                                    res_info.err.status + " " + res_info.err.statusText);
-                                }                               
-                            });
+                                }else throw "";
+                            }catch(e) {
+                                console.error("Can not read the number of bundles information.");
+                            }                               
+                        });
 
-                            return ginfo_bundle; }) })
-                .catch(err => console.error(err));
+                        return ginfo_bundle; })
+                    .catch(err => {
+                        console.error(err);
+                        return {/*empty*/}; });
+            }
             /* return ginfo_bundle */ },
         
         gidSelector = function(rqst_gids) {
@@ -193,10 +212,9 @@ GinfoBuilder = (function() {
             let rqst_errless_gids = rqst_gids.filter(gid=> !rqst_err_gids.includes(gid));
 
             /* Copy from 2st cache to 1st cache. */
-            let toward_gids = rqst_errless_gids.filter(gid=> !cache[gid]).filter(gid=> meta[gid].plain);
-            let toward_ginfo_bundle = toward_gids.reduce((pre,gid)=>{return Object.assign(pre, { [gid] : meta[gid] }); }, {});
-
-            Object.assign(cache, toward_ginfo_bundle); //cache += toward_ginfo_bundle
+            //let toward_gids = rqst_errless_gids.filter(gid=> !cache[gid]).filter(gid=> meta[gid].plain);
+            //let toward_ginfo_bundle = toward_gids.reduce((pre,gid)=>{return Object.assign(pre, { [gid] : meta[gid] }); }, {});
+            //Object.assign(cache, toward_ginfo_bundle); //cache += toward_ginfo_bundle
 
             /* Select gids that does not exist in the cache. */
             let sel_gids = rqst_errless_gids.filter(gid => !cache[gid]);

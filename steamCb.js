@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.1.19 - 2018-12-05
+ * steamCb - v0.1.20 - 2018-12-05
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -18,7 +18,7 @@ function SteamCb() {
     console.log("New SteamCb");
 };
 SteamCb.prototype = function() {
-    var setLayout = function(theme) {
+    var setLayout = function(theme, spinner) {
             let $document = $(theme.outline.base); //new
 
             let dom = { //dom object
@@ -29,10 +29,10 @@ SteamCb.prototype = function() {
                 $message : $document.find("#cb-message"),
                 $trashbox : $document.find("#cb-trashbox")
             };
-            setEvent(dom, theme);
+            setEvent(dom, theme, spinner);
             return dom;
         },
-        setEvent = function(dom, theme) {
+        setEvent = function(dom, theme, spinner) {
 
             /* Connect the tables and apply the sortable */
             dom.$document.find(".cb-connectedSortable")
@@ -45,16 +45,23 @@ SteamCb.prototype = function() {
                         if(key.keyCode == 13) {
                             let gids = $(this).val().split(',').map(gid => gid.trim());
 
-                            addGames(dom.$article, dom.$head, theme, gids); }})
+                            if(!dom.$article.children("table").length) //no table
+                                addTable(dom.$article, theme);
+                            addGames(dom.$article, dom.$head, theme, spinner, gids); }})
                     .attr("disabled","disabled");
-
+            
+            /* Informs it is loading. */
+            spinner.spin();
+            dom.$head.append(spinner.el);
             
             /* Preheat GinfoBuilder */
             GinfoBuilder
-                    .preheat().then(success =>{ //async
-                        if(success) {
-                            dom.$head.find("input.cb-header-searchBar")
-                                    .removeAttr("disabled");} });
+                    .preheat() //async
+                    .then(() => {
+                        dom.$head.find("input.cb-header-searchBar")
+                                .removeAttr("disabled");
+                        spinner.stop(); })
+                    .catch(()=> {/*error code*/});
 
             /* Add a table */
             dom.$head.find("button.cb-header-addTable")
@@ -103,15 +110,29 @@ SteamCb.prototype = function() {
                     .on("click", function() { 
                         $(this).siblings(":not(tr.cb-sortable-disabled)").remove();});
 
+            
             /* Intercept Console */
-            if(true) {
-                window.console.log = function(msg) {
-                    dom.$message.append(msg + "<br>");
+            var console_capture = function() {
+                    window.console.log = function(msg) {
+                        dom.$message.append(msg + "<br>"); };
+                    window.console.error = function(msg) {
+                        dom.$message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
+                console_release = function() {
+                        var i = document.createElement('iframe');
+                        i.style.display = 'none';
+                        document.body.appendChild(i);
+                        window.console = i.contentWindow.console;
                 };
-                window.console.error = function(msg) {
-                    dom.$message.append(`<font color="red">` + msg + `</font>` + "<br>");
-                };
+            if(dom.$message.find("input:checkbox").is(":checked")) {
+                console_capture();
             }
+            dom.$message.find("input:checkbox")
+                    .on("change", function() {
+                        if($(this).is(":checked")) {
+                            console_capture();
+                        } else {
+                            console_release();
+                        } });
         },
         popUp = function($document, arg) {
             arg = arg || {width:550, height:750}; //default
@@ -156,31 +177,8 @@ SteamCb.prototype = function() {
 
             console.log("A table has been added");
         },
-        addGames = function($article, $head, theme, gids) {
-            if(!$article.children("table").length) addTable($article, theme);
-
-            const spinner_opts = {
-                lines: 8, // The number of lines to draw
-                length: 5, // The length of each line
-                width: 9, // The line thickness
-                radius: 16, // The radius of the inner circle
-                scale: 0.35, // Scales overall size of the spinner
-                corners: 1, // Corner roundness (0..1)
-                color: '#000000', // CSS color or array of colors
-                fadeColor: 'transparent', // CSS color or array of colors
-                speed: 1, // Rounds per second
-                rotate: 0, // The rotation offset
-                animation: 'spinner-line-fade-quick', // The CSS animation name for the lines
-                direction: 1, // 1: clockwise, -1: counterclockwise
-                zIndex: 2e9, // The z-index (defaults to 2000000000)
-                className: 'spinner', // The CSS class to assign to the spinner
-                top: '-12px', // Top position relative to parent
-                left: '270px', // Left position relative to parent
-                shadow: '0 0 1px transparent', // Box-shadow for the lines
-                position: 'relative' // Element positioning
-                };
-
-            var spinner = new Spinner(spinner_opts).spin(); //new
+        addGames = function($article, $head, theme, spinner, gids) {
+            spinner.spin(); //new
             $head.append(spinner.el);
 
             GinfoBuilder //async
@@ -243,20 +241,42 @@ SteamCb.prototype = function() {
                     console.log(error);
                     spinner.stop(); 
                 });
-        }
+        };
+
+    const spinner_opts = {
+        lines: 8, // The number of lines to draw
+        length: 5, // The length of each line
+        width: 9, // The line thickness
+        radius: 16, // The radius of the inner circle
+        scale: 0.35, // Scales overall size of the spinner
+        corners: 1, // Corner roundness (0..1)
+        color: '#000000', // CSS color or array of colors
+        fadeColor: 'transparent', // CSS color or array of colors
+        speed: 1, // Rounds per second
+        rotate: 0, // The rotation offset
+        animation: 'spinner-line-fade-quick', // The CSS animation name for the lines
+        direction: 1, // 1: clockwise, -1: counterclockwise
+        zIndex: 2e9, // The z-index (defaults to 2000000000)
+        className: 'spinner', // The CSS class to assign to the spinner
+        top: '-12px', // Top position relative to parent
+        left: '270px', // Left position relative to parent
+        shadow: '0 0 1px transparent', // Box-shadow for the lines
+        position: 'relative' // Element positioning
+        };
 
     return {
         //public
         init : function() { 
             this.theme = themeCollection("eevee"); //new
-            this.dom = setLayout(this.theme);
+            this.spinner = new Spinner(spinner_opts);
+            this.dom = setLayout(this.theme, this.spinner);
             this.el = this.dom.$document;
             $("head").append($(this.theme.style.header));
         },
         popUp : function(arg) { popUp(this.dom.$document, arg); },
         popDelete : function() { popDelete(this.dom.$document); },
         addTable : function() { addTable(this.dom.$article, this.theme); },
-        addGames : function(gids){ addGames(this.dom.$article, this.dom.$head, this.theme, gids);}
+        addGames : function(gids){ addGames(this.dom.$article, this.dom.$head, this.theme, this.spinner, gids);}
     };
 }();
 
@@ -297,7 +317,9 @@ var themeCollection = function(arg) {
                             </table>
                         </div>
 
-                        <div id="cb-message"/>
+                        <div id="cb-message">
+                            <input type="checkbox" checked>
+                        </div>
                     </div>` },
         table_outline = {
             table : `<table>
@@ -364,6 +386,9 @@ var themeCollection = function(arg) {
                             border : .5px solid #CCC;
                             overflow : auto;
                             word-break : break-all;
+                        }
+                        #cb-message input[type='checkbox'] {
+                            float : right;
                         }
                         #cb-trashbox {
                             min-width : 80px;
