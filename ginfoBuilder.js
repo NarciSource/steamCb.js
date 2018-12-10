@@ -20,6 +20,8 @@ GinfoBuilder = (function() {
             this.name = "?";
             this.gid = "?";
             this.plain = "?";
+            this.reviews_perc = "?";
+            this.reviews_text = "?";
             this.trading_cards = "?";
             this.achievements = "?";
             this.retail_price = "?";
@@ -263,11 +265,13 @@ GinfoBuilder = (function() {
                                 gdata.trading_cards = res_info.d.data[plain].trading_cards;
                                 gdata.achievements = res_info.d.data[plain].achievements;
                                 gdata.url_price_info = res_info.d.data[plain].urls.game;
-                                //gdata.reviews = res_info.d.data[plain].reviews.steam; //ex.{"perc_positive": 94,"total": 154,"text": "Very Positive","timestamp": 1543913493}
+                                gdata.reviews_perc = res_info.d.data[plain].reviews.steam.perc_positive;
+                                gdata.reviews_text = res_info.d.data[plain].reviews.steam.text;
                                 gdata.is_dlc = res_info.d.data[plain].is_dlc;
                                 gdata.is_package = res_info.d.data[plain].is_package;
                             } else throw "";
                         }catch(e) {
+                            console.log(e);
                             console.error("Can not read the trading cards and achievemts informaion.");
                         }
 

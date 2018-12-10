@@ -69,7 +69,12 @@ if( $(location).attr('href').match(/itcm.co.kr/)) {
                 let gids = $('.steam_read_selected tbody .app > .item_image')
                             .map((idx, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
                             .toArray();
+                if(!steamCb) {
+                    steamCb = new SteamCb();
+                    $(".column_login").after(steamCb.el);
+                }
 
+                steamCb.popUp({width:550, height:750});
                 steamCb.addGames(gids);
             })
             .children().css({"background-color":"#333",

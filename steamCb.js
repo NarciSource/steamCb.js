@@ -192,38 +192,44 @@ SteamCb.prototype = function() {
                                         (ginfo.is_dlc===true? " (dlc)":""))
                                     .htmlTo($data.eq(0));
 
+                        if(ginfo.reviews_text === "?") {
+                            $data.eq(1).text("?");
+                        } else {
+                            $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)")
+                                     .htmlTo($data.eq(1));
+                        }
                         
                         if(ginfo.trading_cards === "?") {
-                            $data.eq(1).text("?");
+                            $data.eq(2).text("?");
                         } else if(ginfo.trading_cards) {
                             $("<a/>").attr("href", ginfo.url_cards)
                                         .text("❤")
-                                        .htmlTo($data.eq(1));
-                        } else {
-                            $data.eq(1).text("-");
-                        }
-
-                        if(ginfo.achievements === "?") {
-                            $data.eq(2).text("?");
-                        } else if(ginfo.achievements) {
-                            $("<a/>").attr("href", ginfo.url_archv)
-                                        .text("▨")
                                         .htmlTo($data.eq(2));
                         } else {
                             $data.eq(2).text("-");
                         }
+
+                        if(ginfo.achievements === "?") {
+                            $data.eq(3).text("?");
+                        } else if(ginfo.achievements) {
+                            $("<a/>").attr("href", ginfo.url_archv)
+                                        .text("▨")
+                                        .htmlTo($data.eq(3));
+                        } else {
+                            $data.eq(3).text("-");
+                        }
                                     
                         $("<a/>").attr("href", ginfo.url_bundles)
                                     .text(ginfo.bundles)
-                                    .htmlTo($data.eq(3));
+                                    .htmlTo($data.eq(4));
                                     
                         $("<a/>").attr("href", ginfo.url_history)
                                     .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
-                                    .htmlTo($data.eq(4));
+                                    .htmlTo($data.eq(5));
                                     
                         $("<a/>").attr("href", ginfo.url_price_info)
                                     .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
-                                    .htmlTo($data.eq(5));
+                                    .htmlTo($data.eq(6));
 
                                     
                         $data.attr("style", this.theme.style.td)
@@ -330,12 +336,12 @@ var themeCollection = function(arg) {
         table_outline = {
             table : `<table>
                         <thead><tr>
-                                <th>Game</th><th>Cards</th><th>Archv</th>
+                                <th>Game</th><th>Ratings</th><th>Cards</th><th>Archv</th>
                                 <th>BDL</th><th>Lowest</th><th>Retail</th>
                         </tr></thead>
                         <tbody/>
                     </table>`,
-            record : `<tr><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>` },
+            record : `<tr><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>` },
         default_style = {
             header : `<style type="text/css">
                         #steamcb {
