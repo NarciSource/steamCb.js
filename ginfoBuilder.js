@@ -1,5 +1,5 @@
 /**
- * GinfoBuilder - v0.2.0 - 2018-12-10
+ * GinfoBuilder - v0.2.1 - 2018-12-10
  * https://github.com/NarciSource/ginfoBuilder.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -152,7 +152,7 @@ GinfoBuilder = (function() {
 
             /* Combining the both data */
         return Promise.all([loadAppList, loadPlainList])
-                .then((full_name, plain_name) => {
+                .then(([full_name, plain_name]) => {
                     let intersection_gid = Object.keys(full_name)
                                             .concat(Object.keys(plain_name))
                                             .sort()
@@ -163,7 +163,7 @@ GinfoBuilder = (function() {
                                             } , [/*init*/]);
 
                     let combined_data = intersection_gid
-                                            .filter(full_name[gid] && plain_name[gid])
+                                            .filter(gid => full_name[gid] && plain_name[gid])
                                             .map(gid => {
                                                 return {  gid: gid,
                                                         name: full_name[gid],
@@ -433,7 +433,7 @@ var idDB = (function() {
                 let objectStore = transaction.objectStore(dbTable);
 
                 keys.forEach(key => {
-                    var readRequest = objectStore.get(Number(key));
+                    var readRequest = objectStore.get(key);
                     readRequest.onsuccess = function(event) {
                         if(event.target.result !== undefined) {
                             objects.push( event.target.result );
