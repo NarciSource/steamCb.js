@@ -1,3 +1,10 @@
+/**
+ * GinfoBuilder - v0.2.0 - 2018-12-10
+ * https://github.com/NarciSource/ginfoBuilder.js
+ * Copyright 2018. Narci. all rights reserved.
+ * Licensed under the MIT license
+ */
+
 
 /**
  * @method      GinfoBuilder
@@ -6,33 +13,23 @@
  * @example     GinfoBuilder.build(in-gids).then(out-gids, out-ginfo_bundle] => callback)
  */
 GinfoBuilder = (function() {
-    /**
-     * @class       Ginfo
-     * @classdesc   The type of data to send to user.
-     */
+    /** @class       Ginfo
+     *  @classdesc   The type of data to send to user. */
     class Ginfo {
-        constructor({name = "?",
-                    gid = "?",
-                    plain = "?",
-                    trading_cards = "?", 
-                    achievements = "?",
-                    retail_price = "?", 
-                    lowest_price = "?", 
-                    bundles = "?",
-                    reviews = "?",
-                    is_dlc = "?",
-                    is_package = "?"}) {
-            this.name = name;
-            this.gid = gid;
-            this.plain = plain;
-            this.trading_cards = trading_cards;
-            this.achievements = achievements;
-            this.retail_price = retail_price;
-            this.lowest_price = lowest_price;
-            this.bundles = bundles;
-            this.reviews = reviews;
-            this.is_dlc = is_dlc;
-            this.is_package = is_package;
+        constructor(gdata) {
+            this.name = "?";
+            this.gid = "?";
+            this.plain = "?";
+            this.trading_cards = "?";
+            this.achievements = "?";
+            this.retail_price = "?";
+            this.lowest_price = "?";
+            this.bundles = "?";
+            this.reviews = "?";
+            this.is_dlc = "?";
+            this.is_package = "?";
+
+            Object.assign(this, gdata);
         }
         get url_store() {
             return "https://store.steampowered.com/app/"+this.gid; }
@@ -53,9 +50,18 @@ GinfoBuilder = (function() {
         get url_bundles() {
             return this._url_bundles || "#"; }
     }
-    /** @typedef {Object.<number, Ginfo>} GinfoBundle */
 
 
+    /**
+     * @typedef {number[]} gids
+     * @typedef {{name:string, plain:string}} gdata
+     * @typedef {gdata[]} glist
+     * @typedef {{gid: gdata}} gbundle
+     * @typedef {{name:string, plain:string, achievements:boolean}} ginfoEX
+     * @typedef {ginfoEX[]} glistEX
+     * @typedef {{gid: ginfoEX}} gbundleEX
+     * @typedef {{gid: Ginfo}} ginfobundle
+     */
         
 
     var getSteamworksAppDetail = (appid) => {
@@ -74,7 +80,7 @@ GinfoBuilder = (function() {
                 url: "https://store.steampowered.com/api/appdetails?appids="+appids.join()+"&cc="+opt.currency+"&l="+opt.language+"&filters=price_overview"});}
 
     var getITAD = (url) => {
-        const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af";
+        const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af"; //mykey
         return $.ajax({
             url: url.replace('%key%',itad_api_key) }); },
         getITADPlainList = () => {
@@ -94,164 +100,254 @@ GinfoBuilder = (function() {
 
 
 
-    /** @type {GinfoBundle} */
-    var cache = {},
-        meta = {};   //This is also a secondary cache.
+    /** @type {ginfobundle} */
+    var cache = {};
 
 
-    var loadBackup = function() {  //promise
-            /* load applist */
-            return getSteamworksAppList()
+    /** @function    externalLoad (async)
+     *  @description Load basic data from steam and itad api.
+     *  @return      {Promise<glist>} Regular name and plain based on gid. */
+    function externalLoad() {
+            /* Load from Steam api */
+        let loadAppList = getSteamworksAppList() 
                 .then(res=> {
+                    let data = {/*gid:full_name*/};
                     res.applist.apps.app.forEach(app=> {
-                        meta[app.appid] = new Ginfo({name:app.name, gid:app.appid});
+                        data[app.appid] = app.name;
                     });
 
                     console.log("Loads all steam applist.");
                     console.log("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
                                 res.applist.apps.app.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
-
-                    return Promise.resolve(); })
+                                
+                    return Promise.resolve(data);
+                })
                 .catch(err=> {
+                    console.log(err);
                     console.error("Steam api is inaccessible. "+ 
                                 err.status + " " + err.statusText);
-                    return Promise.reject("steam error"); })
-                    
-                .then(res=> getITADPlainList())
+                    return Promise.reject(); 
+                }),
+
+
+            /* Load from ITAD api */
+            loadPlainList = getITADPlainList()
                 .then(res=> {
+                    let data = {/*gid:plane_name*/};
                     Object.keys(res.data.steam).filter(gid => gid.match("app")).map(gid => {
                         const appid = gid.match(/[0-9]+/);
-                        if(meta[appid]) 
-                            meta[appid].plain = res.data.steam[gid];
+                        data[appid] = res.data.steam[gid];
                     });
 
                     console.log("Loads itad steam game's plain list");
                     
-                    return Promise.resolve();
+                    return Promise.resolve(data);
                 })
                 .catch(err=> {
-                    if(err != "steam error") {
-                        console.error("ITAD api is inaccessible. "+ 
-                            err.status + " " + err.statusText);
-                    }
+                    console.error("ITAD api is inaccessible. "+ 
+                        err.status + " " + err.statusText);
                     return Promise.reject();
                 });
-            },
 
-        loadInfo = function([gids, ginfo_bundle]) { //promise
-            if(gids.length===0) return Promise.resolve({/*empty*/});
-            else {
-                let plains = gids.map(gid => ginfo_bundle[gid].plain);
 
-                /* combine promise */
-                let promises = [getITADPrice(plains.join()), //1)crrent price
-                                getITADInfo(plains.join()), //2)additional information
-                                getITADLowest(plains.join()), //3)lowest price
-                                getITADBundles(plains.join())].map(promise =>  //4)number of bundles
-                                    promise.then(d => ({success: true, d}), 
-                                                err => ({success: false, err})));
-                /* load infomation */
-                return Promise.all(promises)
-                    .then(([res_price, res_info, res_lowest, res_bundles]) => {
-                        gids.forEach(gid => {
-                            let ginfo = ginfo_bundle[gid];
-                            let plain = ginfo.plain;
+            /* Combining the both data */
+        return Promise.all([loadAppList, loadPlainList])
+                .then((full_name, plain_name) => {
+                    let intersection_gid = Object.keys(full_name)
+                                            .concat(Object.keys(plain_name))
+                                            .sort()
+                                            .reduce((pre, gid, i, self) => {
+                                                if(i && self[i-1] === gid) //twice
+                                                    pre.push(gid);
+                                                return pre;
+                                            } , [/*init*/]);
 
-                            if(plain === "?") return;
+                    let combined_data = intersection_gid
+                                            .filter(full_name[gid] && plain_name[gid])
+                                            .map(gid => {
+                                                return {  gid: gid,
+                                                        name: full_name[gid],
+                                                        plain: plain_name[gid] }; });
+                    return combined_data;
+                });
+    };
 
-                            try {
-                                if(res_price.success) {
-                                    ginfo.retail_price = res_price.d.data[plain].list[0].price_new;
-                                } else throw "";
-                            }catch(e) {
-                                console.error("Can not read the price information.");
-                            }
 
-                            try {
-                                if(res_info.success) {
-                                    ginfo.trading_cards = res_info.d.data[plain].trading_cards;
-                                    ginfo.achievements = res_info.d.data[plain].achievements;
-                                    ginfo.url_price_info = res_info.d.data[plain].urls.game;
-                                    ginfo.reviews = res_info.d.data[plain].reviews.steam; //ex.{"perc_positive": 94,"total": 154,"text": "Very Positive","timestamp": 1543913493}
-                                    ginfo.is_dlc = res_info.d.data[plain].is_dlc;
-                                    ginfo.is_package = res_info.d.data[plain].is_package;
-                                } else throw "";
-                            }catch(e) {
-                                console.error("Can not read the trading cards and achievemts informaion.");
-                            }
+    /** @function    loadBase (async)
+     *  @description Check whether there is data in db, and if not, load it.
+     *  @return      {Promise<boolean>} */
+    function loadBase() {
+        return new Promise(function(resolve, reject) {
+            idDB.isExist()
+                .then(isExist => {
+                    if(isExist) {
+                        resolve(true);                        
+                    } else {
+                        /* Import data from outside */
+                        externalLoad()
+                            .then(res => {
+                                console.log("externalLoad");
+                                /* Write the data in DB */
+                                idDB.write( res ) //async
+                                    .then(()=>{/*success*/})
+                                    .catch(()=>{/*error*/});
+                                resolve(true);
+                            })
+                            .catch(() => reject(false));
+                    }
+                })
+                .catch(()=> {
+                    reject(false);
+                });
+        }); 
+    };
 
-                            try {
-                                if(res_lowest.success) {
-                                    ginfo.lowest_price = res_lowest.d.data[plain].price;
-                                    ginfo.url_history = res_lowest.d.data[plain].urls.history;
-                                } else throw "";
-                            }catch(e) {
-                                console.error("Can not read the lowest price information.");
-                            }
 
-                            try {
-                                if(res_bundles.success) {
-                                    ginfo.bundles = res_bundles.d.data[plain].total;
-                                    ginfo.url_bundles = res_bundles.d.data[plain].urls.bundles;
-                                }else throw "";
-                            }catch(e) {
-                                console.error("Can not read the number of bundles information.");
-                            }                               
-                        });
-
-                        return ginfo_bundle; })
-                    .catch(err => {
-                        console.error(err);
-                        return {/*empty*/}; });
-            }
-            /* return ginfo_bundle */ },
+    /** @function    gidSelector (async)
+     *  @description Select gids that are no errors and needs to be updated.
+     *  @param       {gids} rqst_gids   Gids requested by the user.
+     *  @return      {Promise<gbundle>} */
+    function gidSelector(rqst_gids) {
+        const need_gids = rqst_gids.filter(gid => !cache[gid]);
         
-        gidSelector = function(rqst_gids) {
-            /* Detect errors */
-            let rqst_err_gids = rqst_gids.filter(gid=> !meta[gid]);
-            let rqst_errless_gids = rqst_gids.filter(gid=> !rqst_err_gids.includes(gid));
+        return  idDB.read(need_gids)
+                    .then(glist => {
 
-            /* Copy from 2st cache to 1st cache. */
-            //let toward_gids = rqst_errless_gids.filter(gid=> !cache[gid]).filter(gid=> meta[gid].plain);
-            //let toward_ginfo_bundle = toward_gids.reduce((pre,gid)=>{return Object.assign(pre, { [gid] : meta[gid] }); }, {});
-            //Object.assign(cache, toward_ginfo_bundle); //cache += toward_ginfo_bundle
+                        let gbundle = glist.reduce((pre, gdata) => //bundle is indexed list
+                                Object.assign(pre, { [gdata.gid] : gdata }), {/*init*/} );
+                                
+                        console.log("request gids: "+rqst_gids+" ("+
+                                    "recycle: "+rqst_gids.filter(gid=>cache[gid])+" "+
+                                    "error: "+rqst_gids.filter(gid=>!cache[gid] && !gbundle[gid])+" )");
+                        
+                        return gbundle;
+                    });
+    };
 
-            /* Select gids that does not exist in the cache. */
-            let sel_gids = rqst_errless_gids.filter(gid => !cache[gid]);
-            let sel_ginfo_bundle = sel_gids.reduce((pre,gid)=>{return Object.assign(pre, { [gid] : meta[gid] }); }, {});
 
-            console.log("request gids: "+rqst_gids+" ("+
-                        "recycle: "+rqst_errless_gids.filter(gid=> !sel_gids.includes(gid))+" "+
-                        "error: "+rqst_err_gids+" )");
+    /** @function    loadMore (async)
+     *  @description Load more data from itad api.
+     *  @param       {gbundle} gbundle Base data
+     *  @return      {gbundleEX} Expanded data */
+    function loadMore(gbundle) {
+        var gids = Object.keys(gbundle);
 
-            return ([rqst_errless_gids, [sel_gids, sel_ginfo_bundle]]); }
+        if(gids.length===0) return Promise.resolve({/*empty*/});
+        else {
+            let plains = gids.map(gid => gbundle[gid].plain);
+
+            /* combine promise */
+            let promises = [getITADPrice(plains.join()), //1)crrent price
+                            getITADInfo(plains.join()), //2)additional information
+                            getITADLowest(plains.join()), //3)lowest price
+                            getITADBundles(plains.join())].map(promise =>  //4)number of bundles
+                                promise.then(d => ({success: true, d}), 
+                                            err => ({success: false, err})));
+            /* load infomation */
+            return Promise.all(promises)
+                .then(([res_price, res_info, res_lowest, res_bundles]) => {
+                    gids.forEach(gid => {
+                        let gdata = gbundle[gid];
+                        let plain = gdata.plain;
+
+                        try {
+                            if(res_price.success) {
+                                gdata.retail_price = res_price.d.data[plain].list[0].price_new;
+                            } else throw "";
+                        }catch(e) {
+                            console.error("Can not read the price information.");
+                        }
+
+                        try {
+                            if(res_info.success) {
+                                gdata.trading_cards = res_info.d.data[plain].trading_cards;
+                                gdata.achievements = res_info.d.data[plain].achievements;
+                                gdata.url_price_info = res_info.d.data[plain].urls.game;
+                                //gdata.reviews = res_info.d.data[plain].reviews.steam; //ex.{"perc_positive": 94,"total": 154,"text": "Very Positive","timestamp": 1543913493}
+                                gdata.is_dlc = res_info.d.data[plain].is_dlc;
+                                gdata.is_package = res_info.d.data[plain].is_package;
+                            } else throw "";
+                        }catch(e) {
+                            console.error("Can not read the trading cards and achievemts informaion.");
+                        }
+
+                        try {
+                            if(res_lowest.success) {
+                                gdata.lowest_price = res_lowest.d.data[plain].price;
+                                gdata.url_history = res_lowest.d.data[plain].urls.history;
+                            } else throw "";
+                        }catch(e) {
+                            console.error("Can not read the lowest price information.");
+                        }
+
+                        try {
+                            if(res_bundles.success) {
+                                gdata.bundles = res_bundles.d.data[plain].total;
+                                gdata.url_bundles = res_bundles.d.data[plain].urls.bundles;
+                            }else throw "";
+                        }catch(e) {
+                            console.error("Can not read the number of bundles information.");
+                        }                               
+                    });
+
+                    return gbundle; })
+                .catch(err => {
+                    console.error(err);
+                    return {/*empty*/}; });
+        }
+    };
+     
+    
+    /** @function    dataProcessing
+     *  @description Process the data into informaion
+     *  @param       {gbundleEX} gbundle
+     *  @return      {ginfobundle} ginfo bundle */
+    function dataProcessing(gbundle) {
+        return ginfobundle = Object.keys(gbundle).reduce((pre, gid) => {
+                                let gdata = gbundle[gid];
+                                Object.assign(pre, { [gdata.gid] : new Ginfo(gdata) }); //covered
+                                return pre;
+                            }, {/*init*/})
+    }
+
+
+    /** @function    save
+     *  @description Save to cache
+     *  @param       {ginfobundle} ginfobundle
+     *  @return      {ginfobundle} cache. */
+    function save(ginfobundle) {
+        /* Back up results to cache */
+        Object.assign(cache, ginfobundle); //cache += result_gbundle
+        return cache;
+    }
+        
 
 
 
     //body
     return {
-        /**
-         * @method      build
-         * @description 
-         * @param       {number[]} rqst_gids   Request gids.
-         * @return      {Promise<[number[], GinfoBundle]>} Returns the error removal gids and collected information.
-         */
+        /** @method      build (async)
+         *  @description Build information based on the request gids.
+         *  @param       {gids} rqst_gids   Request gids.
+         *  @return      {Promise<glistEX>} Returns collected information.*/
         build : function(rqst_gids) {
-            /* Select gids that are no errors and needs to be updated. */
-            const [rqst_errless_gids, selcted] = gidSelector(rqst_gids);
-
-            return loadInfo(selcted)
-                .then(res_ginfo_bundle => {
-                    /* Back up results to cache */
-                    Object.assign(cache, res_ginfo_bundle); //cache += res_ginfo_bundle
-
-                    /* Choose from cache. */
-                    let solution_ginfo_bundle = rqst_errless_gids.reduce((pre,gid)=>{return Object.assign(pre, { [gid] : cache[gid] }); }, {}) ;
-                    
-                    return ([rqst_errless_gids , solution_ginfo_bundle]); }); },
-        preheat : function() {
-            return loadBackup();
+            return  loadBase().then(()=>
+                    gidSelector(rqst_gids)).then(selcted_gbundle => 
+                    loadMore(selcted_gbundle)).then(extend_gbundle => 
+                    dataProcessing(extend_gbundle)).then(ginfobundle =>
+                    save(ginfobundle)).then(cache =>
+                    rqst_gids.filter(gid => cache[gid]).map(gid => cache[gid]));
         },
+
+        /** @method      preheat (async)
+         *  @description Preparations are necessary before build method.
+         *  @return      {Promise<boolean>} */
+        preheat : function() {
+            return loadBase();
+        },
+
+        /** @method      getProduct
+         *  @return      {gbundleEX} cache */
         getProduct : function() {
             return cache; },
 
@@ -259,4 +355,101 @@ GinfoBuilder = (function() {
             cache.clear(); }
     };
 
+})();
+
+
+
+
+
+
+
+
+var idDB = (function() {
+    window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+    window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction;
+    window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange
+    // (Mozilla has never prefixed these objects, so we don't need window.mozIDB*)
+
+    if (!window.indexedDB) {
+        window.alert("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.")
+    }
+
+    var db;
+    const dbName = "ginfoDB";
+    const version = 1;
+    const dbTable = "ginfoTable";
+    const primaryKey = "gid";
+    //const candidateKey = "plain";
+
+
+    let request = window.indexedDB.open( dbName, version);
+    request.onsuccess = function(res) {
+        db = res.target.result;
+        console.log("request success");
+    }
+    request.onerror = function(res) {
+        window.alert("Database error: " + res.target.errorCode);
+    }
+    request.onupgradeneeded = function(res) { // upgrade.then=>success
+        db = res.target.result;
+        console.log("request upgrade");
+        
+        let objectStore = db.createObjectStore( dbTable, {keyPath: primaryKey});
+        //objectStore.createIndex(candidateKey, candidateKey, { unique: true });
+    }
+
+    return {
+        write: function(objects) {
+            return new Promise(function(resolve, reject) {
+                let transaction = db.transaction(dbTable, "readwrite");
+                transaction.oncomplete = ()=> { //callback
+                    console.log("transaction success");
+                    resolve();
+                }
+                transaction.onerror = () => {
+                    console.error("transaction error");
+                    reject();
+                }
+                let objectStore = transaction.objectStore(dbTable);
+
+                objects.forEach(object => {
+                    objectStore.add(object);
+                });
+            });
+        },
+        read: function(keys) {
+            var objects = [];
+
+            return new Promise(function(resolve, reject) {
+                let transaction = db.transaction(dbTable, "readonly");
+                transaction.oncomplete = ()=> {
+                    console.log("transaction success");
+                    resolve(objects);
+                }
+                transaction.onerror = () => {
+                    console.error("transaction error");
+                    reject();
+                }
+                let objectStore = transaction.objectStore(dbTable);
+
+                keys.forEach(key => {
+                    var readRequest = objectStore.get(Number(key));
+                    readRequest.onsuccess = function(event) {
+                        if(event.target.result !== undefined) {
+                            objects.push( event.target.result );
+                        }
+                    };
+                });
+            });
+        },
+        isExist: function() {
+            return new Promise(function(resolve, reject) {
+                let objectStore = db.transaction(dbTable, "readonly").objectStore(dbTable);
+                objectStore.count().onsuccess = function(event) {
+                    resolve(event.target.result !== 0);
+                };
+            });
+        }
+    }
+    
 })();

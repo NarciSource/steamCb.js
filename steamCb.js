@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.1.20 - 2018-12-05
+ * steamCb - v0.2.0 - 2018-12-10
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -18,63 +18,60 @@ function SteamCb() {
     console.log("New SteamCb");
 };
 SteamCb.prototype = function() {
-    var setLayout = function(theme, spinner) {
-            let $document = $(theme.outline.base); //new
+    var _setLayout = function() {
+            this.$document = $(this.theme.outline.base); //new
 
-            let dom = { //dom object
-                $document : $document,
-                $head : $document.find("#cb-header"),
-                $article : $document.find("#cb-article"),
-                $aside : $document.find("#cb-aside"),
-                $message : $document.find("#cb-message"),
-                $trashbox : $document.find("#cb-trashbox")
-            };
-            setEvent(dom, theme, spinner);
-            return dom;
+            this.$head = this.$document.find("#cb-header");
+            this.$article = this.$document.find("#cb-article");
+            this.$aside = this.$document.find("#cb-aside");
+            this.$message = this.$document.find("#cb-message");
+            this.$trashbox = this.$document.find("#cb-trashbox");
         },
-        setEvent = function(dom, theme, spinner) {
+        _setEvent = function() {
+            let that = this; //To keep the scope within the callback
+            /* Informs it is loading. */
+            this.spinner.spin();
+            this.$head.append(this.spinner.el);
+            
+            /* Preheat GinfoBuilder */ 
+            GinfoBuilder
+                    .preheat() //async
+                    .then(() => {
+                        console.log("preheat");
+                        that.$head.find("input.cb-header-searchBar")
+                                .removeAttr("disabled");
+                        that.spinner.stop(); })
+                    .catch(()=> {/*error code*/});
 
+  
             /* Connect the tables and apply the sortable */
-            dom.$document.find(".cb-connectedSortable")
+            this.$document.find(".cb-connectedSortable")
                     .sortable({ cancel: ".cb-sortable-disabled",
                         connectWith: ".cb-connectedSortable" });
 
             /* Search bar */
-            dom.$head.find("input.cb-header-searchBar")
+            this.$head.find("input.cb-header-searchBar")
                     .on("keydown", function (key) {
                         if(key.keyCode == 13) {
                             let gids = $(this).val().split(',').map(gid => gid.trim());
 
-                            if(!dom.$article.children("table").length) //no table
-                                addTable(dom.$article, theme);
-                            addGames(dom.$article, dom.$head, theme, spinner, gids); }})
+                            if(!that.$article.children("table").length) { //no table
+                                _addTable.call(that); }
+                            _addGames.call(that, gids); }})
                     .attr("disabled","disabled");
             
-            /* Informs it is loading. */
-            spinner.spin();
-            dom.$head.append(spinner.el);
-            
-            /* Preheat GinfoBuilder */
-            GinfoBuilder
-                    .preheat() //async
-                    .then(() => {
-                        dom.$head.find("input.cb-header-searchBar")
-                                .removeAttr("disabled");
-                        spinner.stop(); })
-                    .catch(()=> {/*error code*/});
-
             /* Add a table */
-            dom.$head.find("button.cb-header-addTable")
+            this.$head.find("button.cb-header-_addTable")
                     .on("click", function() { 
-                        addTable(dom.$article, theme); });
+                        _addTable.call(that); });
 
             /* Select a theme */
-            dom.$head.find("select")
+            this.$head.find("select")
                     .on("click", function() {
-                        theme = themeCollection(this.value); });
+                        that.theme = themeCollection(this.value); });
 
             /* Copy to clipboard */
-            dom.$aside.find("button.cb-aside-copyToClip")
+            this.$aside.find("button.cb-aside-copyToClip")
                     .on("click", function () {
                         ((el) => {
                             var body = document.body, range, sel;
@@ -94,51 +91,52 @@ SteamCb.prototype = function() {
                                 range.moveToElementText(el);
                                 range.select();
                             }
-                        })( dom.$article[0]);
+                        })( that.$article[0]);
                         console.log("Copy");
                         document.execCommand("Copy");});
             
             /* Erase the trashbox */
-            dom.$trashbox.find("tbody.cb-connectedSortable")
+            this.$trashbox.find("tbody.cb-connectedSortable")
                     .on("mouseenter", function() { 
                         $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
                                 .prev().text("비우기"); })
                     .on("mouseleave", function() {     
                         $(this) .css("cssText", "background: transparent")
                                 .prev().text("휴지통"); })
-            dom.$trashbox.find("tr.cb-sortable-disabled")
+            this.$trashbox.find("tr.cb-sortable-disabled")
                     .on("click", function() { 
-                        $(this).siblings(":not(tr.cb-sortable-disabled)").remove();});
+                        $(this) .siblings().not("tr.cb-sortable-disabled")
+                                .remove();});
 
             
             /* Intercept Console */
             var console_capture = function() {
                     window.console.log = function(msg) {
-                        dom.$message.append(msg + "<br>"); };
+                        that.$message.append(msg + "<br>"); };
                     window.console.error = function(msg) {
-                        dom.$message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
+                        that.$message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
                 console_release = function() {
-                        var i = document.createElement('iframe');
+                        let i = document.createElement('iframe');
                         i.style.display = 'none';
                         document.body.appendChild(i);
                         window.console = i.contentWindow.console;
                 };
-            if(dom.$message.find("input:checkbox").is(":checked")) {
-                console_capture();
+            if(this.$message.find("input:checkbox").is(":checked")) {
+                console_capture.call(this);
             }
-            dom.$message.find("input:checkbox")
+            this.$message.find("input:checkbox")
                     .on("change", function() {
                         if($(this).is(":checked")) {
-                            console_capture();
+                            console_capture.call(that);
                         } else {
-                            console_release();
+                            console_release.call(that);
                         } });
         },
-        popUp = function($document, arg) {
+        _popUp = function(arg) {
             arg = arg || {width:550, height:750}; //default
             
-            if(!$document.hasClass("ui-dialog")) {
-                $document
+            if(!this.$document.hasClass("ui-dialog")) {
+                this.$document
                     .dialog({
                         resizable: true,
                         autoOpen: false,
@@ -150,96 +148,96 @@ SteamCb.prototype = function() {
                     .draggable("option", "containment", "none");
             }
 
-            $document.dialog("open");
+            this.$document.dialog("open");
         },
-        popDelete = function($document) {
-            $document.dialog("destroy");
+        _popDelete = function() {
+            this.$document.dialog("destroy");
         },
-        addTable = function($article, theme) {
-            const $table = $(theme.outline.table).clone(); //new
+        _addTable = function() {
+            const $table = $(this.theme.outline.table).clone(); //new
             
-            $table  .attr("style", theme.style.table)
-                    .appendTo($article);
+            $table  .attr("style", this.theme.style.table)
+                    .appendTo(this.$article);
 
             $table.find("thead")
-                    .attr("style", theme.style.thead)
+                    .attr("style", this.theme.style.thead)
                     .find("th")
-                    .attr("style", theme.style.th)
+                    .attr("style", this.theme.style.th)
                     .first()
-                    .attr("style", theme.style.th+theme.style.thf)
+                    .attr("style", this.theme.style.th+this.theme.style.thf)
                     .nextAll().last()
-                    .attr("style", theme.style.th+theme.style.thl);
+                    .attr("style", this.theme.style.th+this.theme.style.thl);
                     
             $table.find("tbody")
                     .addClass("cb-connectedSortable")
                     .sortable({connectWith: ".cb-connectedSortable"})
-                    .attr("style", theme.style.tbody);
+                    .attr("style", this.theme.style.tbody);
 
             console.log("A table has been added");
         },
-        addGames = function($article, $head, theme, spinner, gids) {
-            spinner.spin(); //new
-            $head.append(spinner.el);
+        _addGames = function(gids) {
+            this.spinner.spin(); //new
+            this.$head.append(this.spinner.el);
 
             GinfoBuilder //async
                 .build(gids)
-                .then(([gids, ginfo_bundle]) => {
-                    gids.forEach(gid => {
-                        let $record = $(theme.outline.record).clone(); //new
+                .then(glist => {
+                    glist.forEach(ginfo => {
+                        let $record = $(this.theme.outline.record).clone(); //new
 
                         let $data = $record.find("td");
                         
-                        $("<a/>").attr("href", ginfo_bundle[gid].url_store)
-                                    .text(ginfo_bundle[gid].name + 
-                                        (ginfo_bundle[gid].is_dlc===true? " (dlc)":""))
+                        $("<a/>").attr("href", ginfo.url_store)
+                                    .text(ginfo.name + 
+                                        (ginfo.is_dlc===true? " (dlc)":""))
                                     .htmlTo($data.eq(0));
 
                         
-                        if(ginfo_bundle[gid].trading_cards === "?") {
+                        if(ginfo.trading_cards === "?") {
                             $data.eq(1).text("?");
-                        } else if(ginfo_bundle[gid].trading_cards) {
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_cards)
+                        } else if(ginfo.trading_cards) {
+                            $("<a/>").attr("href", ginfo.url_cards)
                                         .text("❤")
                                         .htmlTo($data.eq(1));
                         } else {
                             $data.eq(1).text("-");
                         }
 
-                        if(ginfo_bundle[gid].achievements === "?") {
+                        if(ginfo.achievements === "?") {
                             $data.eq(2).text("?");
-                        } else if(ginfo_bundle[gid].achievements) {
-                            $("<a/>").attr("href", ginfo_bundle[gid].url_archv)
+                        } else if(ginfo.achievements) {
+                            $("<a/>").attr("href", ginfo.url_archv)
                                         .text("▨")
                                         .htmlTo($data.eq(2));
                         } else {
                             $data.eq(2).text("-");
                         }
                                     
-                        $("<a/>").attr("href", ginfo_bundle[gid].url_bundles)
-                                    .text(ginfo_bundle[gid].bundles)
+                        $("<a/>").attr("href", ginfo.url_bundles)
+                                    .text(ginfo.bundles)
                                     .htmlTo($data.eq(3));
                                     
-                        $("<a/>").attr("href", ginfo_bundle[gid].url_history)
-                                    .text("$ "+ginfo_bundle[gid].lowest_price)
+                        $("<a/>").attr("href", ginfo.url_history)
+                                    .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
                                     .htmlTo($data.eq(4));
                                     
-                        $("<a/>").attr("href", ginfo_bundle[gid].url_price_info)
-                                    .text("$ "+ginfo_bundle[gid].retail_price)
+                        $("<a/>").attr("href", ginfo.url_price_info)
+                                    .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
                                     .htmlTo($data.eq(5));
 
                                     
-                        $data.attr("style", theme.style.td)
-                            .first().attr("style", theme.style.td+theme.style.tdf)
-                            .nextAll().last().attr("style", theme.style.td+theme.style.tdl);
+                        $data.attr("style", this.theme.style.td)
+                            .first().attr("style", this.theme.style.td+this.theme.style.tdf)
+                            .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
 
-                        $article.find("tbody").last()
+                        this.$article.find("tbody").last()
                                 .append($record);
                     });
-                    spinner.stop();
+                    this.spinner.stop(); // 통합하자
                 })
                 .catch(error => {
                     console.log(error);
-                    spinner.stop(); 
+                    this.spinner.stop(); 
                 });
         };
 
@@ -269,14 +267,22 @@ SteamCb.prototype = function() {
         init : function() { 
             this.theme = themeCollection("eevee"); //new
             this.spinner = new Spinner(spinner_opts);
-            this.dom = setLayout(this.theme, this.spinner);
-            this.el = this.dom.$document;
+            _setLayout.call(this);
+            this.el = this.$document;
+            _setEvent.call(this);
             $("head").append($(this.theme.style.header));
         },
-        popUp : function(arg) { popUp(this.dom.$document, arg); },
-        popDelete : function() { popDelete(this.dom.$document); },
-        addTable : function() { addTable(this.dom.$article, this.theme); },
-        addGames : function(gids){ addGames(this.dom.$article, this.dom.$head, this.theme, this.spinner, gids);}
+        popUp : function(arg) { _popUp.call(this, arg); },
+        popDelete : function() { _popDelete.call(this); },
+        addTable : function() { _addTable.call(this); },
+        addGames : function(gids){ 
+            if(!this.$article.children("table").length) //no table
+               _addTable.call(this);
+            GinfoBuilder
+                .preheat()
+                .then(()=> 
+                    _addGames.call(this, gids)  );
+        }
     };
 }();
 
@@ -289,16 +295,16 @@ SteamCb.prototype = function() {
  * @return      {{string:object}}
  */
 var themeCollection = function(arg) {
-    const popup_outline = {
+    const _popUp_outline = {
             base : `<div id="steamcb" title="Steam Chart builder">
                         <div id="cb-header">
                             <label>검색  </label>
-                            <input class="cb-header-searchBar" placeholder=" Appid 입력 후 엔터"/>
+                            <input type="search" class="cb-header-searchBar" placeholder=" Appid 입력 후 엔터"/>
                             <select>
                                 <option>eevee</option>
                                 <option>sg</option>
                             </select>
-                            <button class="cb-header-addTable">테이블 추가</button>
+                            <button class="cb-header-_addTable">테이블 추가</button>
                         </div>
 
                         <div id="cb-article" class="cb-connectedSortable"/>
@@ -353,10 +359,7 @@ var themeCollection = function(arg) {
                             border-top : 1px solid #CCC;
                             border-bottom : 1px solid #CCC;
                         }
-                        #cb-header input.cb-header-searchBar {
-                            cols : 40; rows : 5;
-                        }
-                        #cb-header button.cb-header-addTable {
+                        #cb-header button.cb-header-_addTable {
                             float : right;
                         }
                         #cb-header select {
@@ -468,12 +471,12 @@ var themeCollection = function(arg) {
     switch(arg) {
         case "eevee":
             return {
-                outline : Object.assign({}, popup_outline, table_outline),
+                outline : Object.assign({}, _popUp_outline, table_outline),
                 style : Object.assign({}, default_style, eevee_style) };
         case "sg":
         default:
             return {
-                outline : Object.assign({}, popup_outline, table_outline),
+                outline : Object.assign({}, _popUp_outline, table_outline),
                 style : Object.assign({}, default_style, sg_style) };
     }
 };
