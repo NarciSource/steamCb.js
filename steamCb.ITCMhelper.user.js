@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         steamCb ITCM Helper
 // @namespace    steamCb
-// @version      0.1
+// @version      0.1.2
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -11,7 +11,7 @@
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/spin.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
-// @updateURL    https://github.com/NarciSource/steamCb.js
+// @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.ITCMhelper.meta.js
 // @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.ITCMhelper.user.js
 // @connect      cdn.steam.tools
 // @connect      api.isthereanydeal.com
