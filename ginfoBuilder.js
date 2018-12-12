@@ -1,5 +1,5 @@
 /**
- * GinfoBuilder - v0.2.1 - 2018-12-10
+ * GinfoBuilder - v0.2.2 - 2018-12-12
  * https://github.com/NarciSource/ginfoBuilder.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -58,11 +58,9 @@ GinfoBuilder = (function() {
      * @typedef {number[]} gids
      * @typedef {{name:string, plain:string}} gdata
      * @typedef {gdata[]} glist
-     * @typedef {{gid: gdata}} gbundle
      * @typedef {{name:string, plain:string, achievements:boolean}} ginfoEX
      * @typedef {ginfoEX[]} glistEX
      * @typedef {{gid: ginfoEX}} gbundleEX
-     * @typedef {{gid: Ginfo}} ginfobundle
      */
         
 
@@ -102,8 +100,16 @@ GinfoBuilder = (function() {
 
 
 
-    /** @type {ginfobundle} */
-    var cache = {};
+    /** @type {glistEX} */
+    var cache = {
+        get: function(gid) {
+            return JSON.parse(sessionStorage.getItem(gid));
+        },
+        set: function(glist) {
+            glist.forEach(gdata => 
+                sessionStorage.setItem(gdata.gid, JSON.stringify(gdata)));
+            return this;
+        }};
 
 
     /** @function    externalLoad (async)
@@ -208,35 +214,29 @@ GinfoBuilder = (function() {
     /** @function    gidSelector (async)
      *  @description Select gids that are no errors and needs to be updated.
      *  @param       {gids} rqst_gids   Gids requested by the user.
-     *  @return      {Promise<gbundle>} */
+     *  @return      {Promise<glist>} */
     function gidSelector(rqst_gids) {
-        const need_gids = rqst_gids.filter(gid => !cache[gid]);
+        const need_gids = rqst_gids.filter(gid => !cache.get(gid));
         
         return  idDB.read(need_gids)
                     .then(glist => {
-
-                        let gbundle = glist.reduce((pre, gdata) => //bundle is indexed list
-                                Object.assign(pre, { [gdata.gid] : gdata }), {/*init*/} );
-                                
                         console.log("request gids: "+rqst_gids+" ("+
-                                    "recycle: "+rqst_gids.filter(gid=>cache[gid])+" "+
-                                    "error: "+rqst_gids.filter(gid=>!cache[gid] && !gbundle[gid])+" )");
+                                    "recycle: "+rqst_gids.filter(gid=>cache.get(gid))+" "+
+                                    "load: "+glist.map(gdata=>gdata.gid)+" else error)");
                         
-                        return gbundle;
+                        return glist;
                     });
     };
 
 
     /** @function    loadMore (async)
      *  @description Load more data from itad api.
-     *  @param       {gbundle} gbundle Base data
-     *  @return      {gbundleEX} Expanded data */
-    function loadMore(gbundle) {
-        var gids = Object.keys(gbundle);
-
-        if(gids.length===0) return Promise.resolve({/*empty*/});
+     *  @param       {glist} glist Base data
+     *  @return      {glistEX} Expanded data */
+    function loadMore(glist) {
+        if(glist.length===0) return Promise.resolve(glist);
         else {
-            let plains = gids.map(gid => gbundle[gid].plain);
+            let plains = glist.map(gdata => gdata.plain);
 
             /* combine promise */
             let promises = [getITADPrice(plains.join()), //1)crrent price
@@ -248,8 +248,7 @@ GinfoBuilder = (function() {
             /* load infomation */
             return Promise.all(promises)
                 .then(([res_price, res_info, res_lowest, res_bundles]) => {
-                    gids.forEach(gid => {
-                        let gdata = gbundle[gid];
+                    glist.forEach(gdata => {
                         let plain = gdata.plain;
 
                         try {
@@ -294,7 +293,7 @@ GinfoBuilder = (function() {
                         }                               
                     });
 
-                    return gbundle; })
+                    return glist; })
                 .catch(err => {
                     console.error(err);
                     return {/*empty*/}; });
@@ -304,25 +303,19 @@ GinfoBuilder = (function() {
     
     /** @function    dataProcessing
      *  @description Process the data into informaion
-     *  @param       {gbundleEX} gbundle
-     *  @return      {ginfobundle} ginfo bundle */
-    function dataProcessing(gbundle) {
-        return ginfobundle = Object.keys(gbundle).reduce((pre, gid) => {
-                                let gdata = gbundle[gid];
-                                Object.assign(pre, { [gdata.gid] : new Ginfo(gdata) }); //covered
-                                return pre;
-                            }, {/*init*/})
+     *  @param       {glistEX} glist
+     *  @return      {ginfolist} ginfo list */
+    function dataProcessing(glist) {
+        return ginfolist = glist.map(gdata => new Ginfo(gdata) ); //covered
     }
 
 
-    /** @function    save
-     *  @description Save to cache
-     *  @param       {ginfobundle} ginfobundle
-     *  @return      {ginfobundle} cache. */
-    function save(ginfobundle) {
-        /* Back up results to cache */
-        Object.assign(cache, ginfobundle); //cache += result_gbundle
-        return cache;
+    /** @function    resultSelector
+     *  @param       {gids} rqst_gids Requested gids for user.
+     *  @param       {glistEX} cache
+     *  @return      {glistEX} Selected glist. */
+    function resultSelector(rqst_gids, cache) {
+        return rqst_gids.filter(gid => cache.get(gid)).map(gid => cache.get(gid));
     }
         
 
@@ -333,14 +326,14 @@ GinfoBuilder = (function() {
         /** @method      build (async)
          *  @description Build information based on the request gids.
          *  @param       {gids} rqst_gids   Request gids.
-         *  @return      {Promise<glistEX>} Returns collected information.*/
+         *  @return      {Promise<ginfolist>} Returns collected information.*/
         build : function(rqst_gids) {
             return  loadBase().then(()=>
-                    gidSelector(rqst_gids)).then(selcted_gbundle => 
-                    loadMore(selcted_gbundle)).then(extend_gbundle => 
-                    dataProcessing(extend_gbundle)).then(ginfobundle =>
-                    save(ginfobundle)).then(cache =>
-                    rqst_gids.filter(gid => cache[gid]).map(gid => cache[gid]));
+                    gidSelector(rqst_gids)).then(selcted_glist => 
+                    loadMore(selcted_glist)).then(extend_glist => 
+                    cache.set(extend_glist)).then(cache =>
+                    resultSelector(rqst_gids,cache)).then(result_glist =>
+                    dataProcessing(result_glist));
         },
 
         /** @method      preheat (async)
@@ -351,7 +344,7 @@ GinfoBuilder = (function() {
         },
 
         /** @method      getProduct
-         *  @return      {gbundleEX} cache */
+         *  @return      {ginfolist} cache */
         getProduct : function() {
             return cache; },
 

@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.2.0 - 2018-12-10
+ * steamCb - v0.2.1 - 2018-12-12
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -14,8 +14,8 @@ $.fn.htmlTo = function(elem) { this.each(function() { $(elem).html($(this)); });
  * @classdesc   
  */
 function SteamCb() {
-    this.init();
     console.log("New SteamCb");
+    this.init();
 };
 SteamCb.prototype = function() {
     var _setLayout = function() {
@@ -40,8 +40,10 @@ SteamCb.prototype = function() {
                         console.log("preheat");
                         that.$head.find("input.cb-header-searchBar")
                                 .removeAttr("disabled");
+                        
+                        _loadPrevious.call(this);
                         that.spinner.stop(); })
-                    .catch(()=> {/*error code*/});
+                    .catch(e=> console.log(e));
 
   
             /* Connect the tables and apply the sortable */
@@ -131,6 +133,32 @@ SteamCb.prototype = function() {
                         } else {
                             console_release.call(that);
                         } });
+
+            /* Record $article's contents in sessionStorage */
+            var contents_recording = function() {
+                    let command = [];
+                    that.$article.find("table[name='cb-table']").each((_, table) => {
+                        command.push("table");
+                        $(table).find("tbody tr").each((_, tr) =>
+                            command.push($(tr).attr("name")) );
+                    });
+                    sessionStorage.setItem("command", JSON.stringify(command));
+                };
+            this.$article.on("DOMNodeInserted", contents_recording);
+            this.$trashbox.on("DOMNodeInserted", contents_recording);
+        },
+        _loadPrevious = function() {
+            let command = JSON.parse(sessionStorage.getItem("command"));
+            if(command) {
+                command.forEach(element => {
+                    switch(element) {
+                        case "table": _addTable.call(this);
+                        break;
+                        default: _addGames.call(this, [element.split("-")[1]]);
+                        break;
+                    }
+                });
+            }
         },
         _popUp = function(arg) {
             arg = arg || {width:550, height:750}; //default
@@ -184,6 +212,7 @@ SteamCb.prototype = function() {
                 .then(glist => {
                     glist.forEach(ginfo => {
                         let $record = $(this.theme.outline.record).clone(); //new
+                        $record.attr("name","gid-"+ginfo.gid);
 
                         let $data = $record.find("td");
                         
@@ -239,12 +268,9 @@ SteamCb.prototype = function() {
                         this.$article.find("tbody").last()
                                 .append($record);
                     });
-                    this.spinner.stop(); // 통합하자
                 })
-                .catch(error => {
-                    console.log(error);
-                    this.spinner.stop(); 
-                });
+                .catch(error => console.log(error))
+                .then(()=> this.spinner.stop());
         };
 
     const spinner_opts = {
@@ -274,8 +300,8 @@ SteamCb.prototype = function() {
             this.theme = themeCollection("eevee"); //new
             this.spinner = new Spinner(spinner_opts);
             _setLayout.call(this);
-            this.el = this.$document;
             _setEvent.call(this);
+            this.el = this.$document;
             $("head").append($(this.theme.style.header));
         },
         popUp : function(arg) { _popUp.call(this, arg); },
@@ -301,7 +327,7 @@ SteamCb.prototype = function() {
  * @return      {{string:object}}
  */
 var themeCollection = function(arg) {
-    const _popUp_outline = {
+    const popUp_outline = {
             base : `<div id="steamcb" title="Steam Chart builder">
                         <div id="cb-header">
                             <label>검색  </label>
@@ -334,7 +360,7 @@ var themeCollection = function(arg) {
                         </div>
                     </div>` },
         table_outline = {
-            table : `<table>
+            table : `<table name="cb-table">
                         <thead><tr>
                                 <th>Game</th><th>Ratings</th><th>Cards</th><th>Archv</th>
                                 <th>BDL</th><th>Lowest</th><th>Retail</th>
@@ -477,12 +503,12 @@ var themeCollection = function(arg) {
     switch(arg) {
         case "eevee":
             return {
-                outline : Object.assign({}, _popUp_outline, table_outline),
+                outline : Object.assign({}, popUp_outline, table_outline),
                 style : Object.assign({}, default_style, eevee_style) };
         case "sg":
         default:
             return {
-                outline : Object.assign({}, _popUp_outline, table_outline),
+                outline : Object.assign({}, popUp_outline, table_outline),
                 style : Object.assign({}, default_style, sg_style) };
     }
 };
