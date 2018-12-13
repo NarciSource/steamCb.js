@@ -7,20 +7,20 @@
 
 
 
-$.fn.htmlTo = function(elem) { this.each(function() { $(elem).html($(this)); }); }
 
 /**
  * @class       SteamCb
  * @classdesc   
  */
-function SteamCb() {
+function SteamCb(arg) {
     console.log("New SteamCb");
-    this.init();
+    this.init(arg || {outline: "popup", style: "eevee"}); //default
 };
+
 SteamCb.prototype = function() {
     var _setLayout = function() {
-            this.$document = $(this.theme.outline.base); //new
-
+            this.$document = this.theme.outline.window.clone(); //new
+            
             this.$head = this.$document.find("#cb-header");
             this.$article = this.$document.find("#cb-article");
             this.$aside = this.$document.find("#cb-aside");
@@ -43,13 +43,13 @@ SteamCb.prototype = function() {
                         
                         _loadPrevious.call(this);
                         that.spinner.stop(); })
-                    .catch(e=> console.log(e));
+                    .catch(e=> console.error(e));
 
   
             /* Connect the tables and apply the sortable */
             this.$document.find(".cb-connectedSortable")
                     .sortable({ cancel: ".cb-sortable-disabled",
-                        connectWith: ".cb-connectedSortable" });
+                                connectWith: ".cb-connectedSortable" });
 
             /* Search bar */
             this.$head.find("input.cb-header-searchBar")
@@ -63,14 +63,34 @@ SteamCb.prototype = function() {
                     .attr("disabled","disabled");
             
             /* Add a table */
-            this.$head.find("button.cb-header-_addTable")
+            this.$head.find("button.cb-header-addTable")
                     .on("click", function() { 
                         _addTable.call(that); });
 
             /* Select a theme */
             this.$head.find("select")
                     .on("click", function() {
-                        that.theme = themeCollection(this.value); });
+                        that.theme = themeCollection({style: this.value});
+                        localStorage.setItem("theme", this.value); });
+
+            /* Erase */
+            this.$head.find("button.cb-delete-button")
+                    .on("click", function() { 
+                        that.$article.not("tr.cb-sortable-disabled").remove();
+                        sessionStorage.setItem("command", []); });    
+            
+            /* Erase the trashbox */
+            this.$trashbox.find("tbody.cb-connectedSortable")
+                    .on("mouseenter", function() { 
+                        $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
+                                .prev().text("비우기"); })
+                    .on("mouseleave", function() {     
+                        $(this) .css("cssText", "background: transparent")
+                                .prev().text("휴지통"); })
+            this.$trashbox.find("tr.cb-sortable-disabled")
+                    .on("click", function() { 
+                        $(this) .siblings().not("tr.cb-sortable-disabled")
+                                .remove();});
 
             /* Copy to clipboard */
             this.$aside.find("button.cb-aside-copyToClip")
@@ -96,19 +116,6 @@ SteamCb.prototype = function() {
                         })( that.$article[0]);
                         console.log("Copy");
                         document.execCommand("Copy");});
-            
-            /* Erase the trashbox */
-            this.$trashbox.find("tbody.cb-connectedSortable")
-                    .on("mouseenter", function() { 
-                        $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
-                                .prev().text("비우기"); })
-                    .on("mouseleave", function() {     
-                        $(this) .css("cssText", "background: transparent")
-                                .prev().text("휴지통"); })
-            this.$trashbox.find("tr.cb-sortable-disabled")
-                    .on("click", function() { 
-                        $(this) .siblings().not("tr.cb-sortable-disabled")
-                                .remove();});
 
             
             /* Intercept Console */
@@ -137,7 +144,7 @@ SteamCb.prototype = function() {
             /* Record $article's contents in sessionStorage */
             var contents_recording = function() {
                     let command = [];
-                    that.$article.find("table[name='cb-table']").each((_, table) => {
+                    that.$article.find("table.cb-table").each((_, table) => {
                         command.push("table");
                         $(table).find("tbody tr").each((_, tr) =>
                             command.push($(tr).attr("name")) );
@@ -148,8 +155,8 @@ SteamCb.prototype = function() {
             this.$trashbox.on("DOMNodeInserted", contents_recording);
         },
         _loadPrevious = function() {
-            let command = JSON.parse(sessionStorage.getItem("command"));
-            if(command) {
+            if(sessionStorage.getItem("command")) {
+                let command = JSON.parse(sessionStorage.getItem("command"));
                 command.forEach(element => {
                     switch(element) {
                         case "table": _addTable.call(this);
@@ -182,7 +189,7 @@ SteamCb.prototype = function() {
             this.$document.dialog("destroy");
         },
         _addTable = function() {
-            const $table = $(this.theme.outline.table).clone(); //new
+            const $table = this.theme.outline.table.clone(); //new
             
             $table  .attr("style", this.theme.style.table)
                     .appendTo(this.$article);
@@ -211,62 +218,56 @@ SteamCb.prototype = function() {
                 .build(gids)
                 .then(glist => {
                     glist.forEach(ginfo => {
-                        let $record = $(this.theme.outline.record).clone(); //new
-                        $record.attr("name","gid-"+ginfo.gid);
-
-                        let $data = $record.find("td");
+                        let $record = this.theme.outline.record.clone(); //new
                         
-                        $("<a/>").attr("href", ginfo.url_store)
-                                    .text(ginfo.name + 
-                                        (ginfo.is_dlc===true? " (dlc)":""))
-                                    .htmlTo($data.eq(0));
-
-                        if(ginfo.reviews_text === "?") {
-                            $data.eq(1).text("?");
-                        } else {
-                            $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)")
-                                     .htmlTo($data.eq(1));
-                        }
+                        $record.find("td").attr("style", this.theme.style.td)
+                               .first().attr("style", this.theme.style.td+this.theme.style.tdf)
+                               .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
                         
-                        if(ginfo.trading_cards === "?") {
-                            $data.eq(2).text("?");
-                        } else if(ginfo.trading_cards) {
-                            $("<a/>").attr("href", ginfo.url_cards)
-                                        .text("❤")
-                                        .htmlTo($data.eq(2));
-                        } else {
-                            $data.eq(2).text("-");
-                        }
+                        /* game field */
+                        $record.find(`td[name="game"]`).html( 
+                            $("<a/>").attr("href", ginfo.url_store).text(ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")));
 
-                        if(ginfo.achievements === "?") {
-                            $data.eq(3).text("?");
-                        } else if(ginfo.achievements) {
-                            $("<a/>").attr("href", ginfo.url_archv)
-                                        .text("▨")
-                                        .htmlTo($data.eq(3));
-                        } else {
-                            $data.eq(3).text("-");
-                        }
-                                    
-                        $("<a/>").attr("href", ginfo.url_bundles)
-                                    .text(ginfo.bundles)
-                                    .htmlTo($data.eq(4));
-                                    
-                        $("<a/>").attr("href", ginfo.url_history)
-                                    .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
-                                    .htmlTo($data.eq(5));
-                                    
-                        $("<a/>").attr("href", ginfo.url_price_info)
-                                    .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'))
-                                    .htmlTo($data.eq(6));
+                        /* ratings field */
+                        $record.find(`td[name="ratings"]`).html((val => {
+                            switch(val) {
+                                case "?" : return "?";
+                                default : return $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)");
+                            }})(ginfo.reviews_text));
+                        
+                        /* cards field */
+                        $record.find(`td[name="cards"]`).html((val => {
+                            switch(val) {
+                                case "?" : return "?";
+                                case false : return "-";
+                                case true : return $("<a/>").attr("href", ginfo.url_cards).html("❤");
+                            }})(ginfo.trading_cards));
 
-                                    
-                        $data.attr("style", this.theme.style.td)
-                            .first().attr("style", this.theme.style.td+this.theme.style.tdf)
-                            .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
+                        /* achievements field */
+                        $record.find(`td[name="archv"]`).html((val => {
+                            switch(val) {
+                                case "?" : return "?";
+                                case false : return "-";
+                                case true : return $("<a/>").attr("href", ginfo.url_archv).text("▨");
+                            }})(ginfo.achievements));
+                        
+                        /* bundles field */
+                        $record.find(`td[name="bdl"]`).html(
+                            $("<a/>").attr("href", ginfo.url_bundles).text(ginfo.bundles));
 
-                        this.$article.find("tbody").last()
-                                .append($record);
+                        /* lowest field */
+                        $record.find(`td[name="lowest"]`).html(
+                            $("<a/>").attr("href", ginfo.url_history)
+                                     .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')));
+                        
+                        /* retail field */
+                        $record.find(`td[name="retail"]`).html(
+                            $("<a/>").attr("href", ginfo.url_price_info)
+                            .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')));
+
+
+                        $record.attr("name","gid-"+ginfo.gid)
+                               .appendTo(this.$article.find("tbody").last());
                     });
                 })
                 .catch(error => console.log(error))
@@ -296,13 +297,17 @@ SteamCb.prototype = function() {
 
     return {
         //public
-        init : function() { 
-            this.theme = themeCollection("eevee"); //new
+        /**@method init
+         * @param  {Object} arg
+         * @param  {string} arg.outline
+         * @param  {string} arg.style */
+        init : function(arg) {
+            this.theme = themeCollection(arg); //new
             this.spinner = new Spinner(spinner_opts);
             _setLayout.call(this);
             _setEvent.call(this);
             this.el = this.$document;
-            $("head").append($(this.theme.style.header));
+            $("head").append(this.theme.style.header);
         },
         popUp : function(arg) { _popUp.call(this, arg); },
         popDelete : function() { _popDelete.call(this); },
@@ -320,195 +325,3 @@ SteamCb.prototype = function() {
 
 
 
-/**
- * @method      themeCollection
- * @description This function has the html and css needed to outline and style
- *              Use in combination.
- * @return      {{string:object}}
- */
-var themeCollection = function(arg) {
-    const popUp_outline = {
-            base : `<div id="steamcb" title="Steam Chart builder">
-                        <div id="cb-header">
-                            <label>검색  </label>
-                            <input type="search" class="cb-header-searchBar" placeholder=" Appid 입력 후 엔터"/>
-                            <select>
-                                <option>eevee</option>
-                                <option>sg</option>
-                            </select>
-                            <button class="cb-header-_addTable">테이블 추가</button>
-                        </div>
-
-                        <div id="cb-article" class="cb-connectedSortable"/>
-
-                        <div id="cb-aside">
-                            <button class="cb-aside-copyToClip">클립보드 복사</button>
-                            <table id="cb-trashbox">
-                                <caption>휴지통</caption>
-                                <tbody class="cb-connectedSortable">
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div id="cb-message">
-                            <input type="checkbox" checked>
-                        </div>
-                    </div>` },
-        table_outline = {
-            table : `<table name="cb-table">
-                        <thead><tr>
-                                <th>Game</th><th>Ratings</th><th>Cards</th><th>Archv</th>
-                                <th>BDL</th><th>Lowest</th><th>Retail</th>
-                        </tr></thead>
-                        <tbody/>
-                    </table>`,
-            record : `<tr><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td><td>?</td></tr>` },
-        default_style = {
-            header : `<style type="text/css">
-                        #steamcb {
-                            padding : 10;
-                            font-family : Arial, sans-serif;
-                            font-size : 13px;
-                        }
-                        #steamcb button {
-                            cursor : pointer;
-                            background-color : transparent;
-                            border : 1px solid #CCC;
-                        }
-                        #steamcb button:hover {
-                            color: rgba(255, 255, 255, 0.85); 
-                            background-color : rgba(0, 102, 204, 0.5);
-                        }
-                        #cb-header {
-                            float : top;
-                            height : 20px;
-                            padding : 10px;
-                            border-top : 1px solid #CCC;
-                            border-bottom : 1px solid #CCC;
-                        }
-                        #cb-header button.cb-header-_addTable {
-                            float : right;
-                        }
-                        #cb-header select {
-                            width : 19px;
-                            height : 19px;
-                            float : right;
-                        }
-                        #cb-article {
-                            float : left;
-                            padding : 10px;
-                            width : calc(100% - 130px);
-                            height : calc(100% - 200px);
-                            overflow : auto;
-                        }
-                        #cb-aside {
-                            float : right;
-                            width : 80px;
-                            height : calc(100% - 200px);
-                            padding : 10px;
-                            overflow-x : hidden;
-                            overflow-y : auto;
-                        }
-                        #cb-message {
-                            clear : both;
-                            height : 100px;
-                            padding : 10px;
-                            border : .5px solid #CCC;
-                            overflow : auto;
-                            word-break : break-all;
-                        }
-                        #cb-message input[type='checkbox'] {
-                            float : right;
-                        }
-                        #cb-trashbox {
-                            min-width : 80px;
-                            max-width : 80px;
-                            margin : 30px 0px;
-                            border : .5px solid #CCC;
-                            border-spacing : 0px;
-                        }
-                        #cb-trashbox caption {
-                            text-align : left;
-                            padding-left : 20px;
-                        }
-                        #cb-trashbox tr.cb-sortable-disabled {
-                            cursor : pointer;
-                            opacity: 0;
-                        }
-                        #cb-trashbox th:not(:first-child),
-                        #cb-trashbox td:not(:first-child) {
-                            display:none;
-                        }
-                        </style>` },
-        sg_style = {
-            table :`border-collapse : collapse;
-                    color : rgb(70,86,112);
-                    font-family : Arial, sans-serif;
-                    font-size : 13px;
-                    font-weight : 400;
-                    line-height : 20.15px;
-                    margin : 0px 0px 15px;
-                    table-layout : fixed;
-                    text-shadow : 1px 1px rgba(255,255,255,0.94);`,
-            thead : `background-color:rgb(232,234,239);
-                    border-bottom : 1px solid rgb(70,86,112);
-                    font-weight:700;
-                    line-height:20.15px;`,
-            tfoot : ``,
-            th : `  border : 1px solid rgb(210,214,224);
-                    padding : 3px 10px 3px 10px;
-                    text-align:center;`, 
-            thf : ` text-align : left;`,
-            thl : ` text-align : center;`,
-            tbody : ``,
-            td : `  border : 1px solid rgb(210,214,224);
-                    padding : 3px 10px 3px 10px;
-                    text-align:center;`,
-            tdf : ` text-align:left;`,
-            tdl : ``},
-        eevee_style = {
-            table : `border-collapse : collapse;
-                    color : #2c2f32;
-                    font-family : Arial, sans-serif;
-                    margin : 0px 0px 15px;
-                    text-shadow : 1px 1px rgba(255,255,255,0.94);`,
-            thead : `background-color: #ffdb52;
-                    border-top : 1px solid #d7a44f;
-                    border-bottom : 2px solid #d7a44f;
-                    font-size : 13px;
-                    line-height : 25.15px;`,
-            tfoot : ``,
-            th : `  border : 1px solid #d7a44f;
-                    padding : 3px 10px;
-                    text-align : center;`,
-            thf : ` border-left : 0px;
-                    text-align : left;`,
-            thl : ` border-right : 0px;`,
-            tbody : `line-height : 20.15px;
-                    font-weight : 400;
-                    color : rgb(70,86,112);`,
-            td : `  background-color : #fdf0c8;
-                    border : 1px solid #fdcf83;
-                    padding : 3px 10px;
-                    text-align : center;`,
-            tdf : ` border-left : 0px;
-                    text-align : left;`,
-            tdl : ` border-right : 0px;`};
-
-    switch(arg) {
-        case "eevee":
-            return {
-                outline : Object.assign({}, popUp_outline, table_outline),
-                style : Object.assign({}, default_style, eevee_style) };
-        case "sg":
-        default:
-            return {
-                outline : Object.assign({}, popUp_outline, table_outline),
-                style : Object.assign({}, default_style, sg_style) };
-    }
-};

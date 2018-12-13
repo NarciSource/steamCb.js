@@ -186,27 +186,24 @@ GinfoBuilder = (function() {
      *  @return      {Promise<boolean>} */
     function loadBase() {
         return new Promise(function(resolve, reject) {
-            idDB.isExist()
-                .then(isExist => {
-                    if(isExist) {
-                        resolve(true);                        
-                    } else {
-                        /* Import data from outside */
-                        externalLoad()
-                            .then(res => {
-                                console.log("externalLoad");
-                                /* Write the data in DB */
-                                idDB.write( res ) //async
-                                    .then(()=>{/*success*/})
-                                    .catch(()=>{/*error*/});
-                                resolve(true);
-                            })
-                            .catch(() => reject(false));
-                    }
-                })
-                .catch(()=> {
-                    reject(false);
-                });
+            idDB.isExist().then(isExist => {
+                if(isExist) {
+                    resolve(true);                        
+                } else {
+                    /* Import data from outside */
+                    externalLoad()
+                        .then(res => {
+                            console.log("externalLoad");
+                            /* Write the data in DB */
+                            idDB.write( res ) //async
+                                .then(()=>{/*success*/})
+                                .catch(()=>{/*error*/});
+                            resolve(true);
+                        })
+                        .catch(() => reject("Error in ExternalLoad"));
+                }
+            })
+            .catch(()=> reject("Error in isExist of IndexedDB.") );
         }); 
     };
 
@@ -378,26 +375,36 @@ var idDB = (function() {
     const primaryKey = "gid";
     //const candidateKey = "plain";
 
-
-    let request = window.indexedDB.open( dbName, version);
-    request.onsuccess = function(res) {
-        db = res.target.result;
-        console.log("request success");
-    }
-    request.onerror = function(res) {
-        window.alert("Database error: " + res.target.errorCode);
-    }
-    request.onupgradeneeded = function(res) { // upgrade.then=>success
-        db = res.target.result;
-        console.log("request upgrade");
-        
-        let objectStore = db.createObjectStore( dbTable, {keyPath: primaryKey});
-        //objectStore.createIndex(candidateKey, candidateKey, { unique: true });
-    }
+    var loadDB = function() {
+        if(db === undefined) {
+            return new Promise(function(resolve, reject) {
+                let request = window.indexedDB.open( dbName, version);
+                request.onsuccess = function(res) {
+                    db = res.target.result;
+                    console.log("request success");
+                    resolve();
+                }
+                request.onerror = function(res) {
+                    window.alert("Database error: " + res.target.errorCode);
+                }
+                request.onupgradeneeded = function(res) { // upgrade.then=>success
+                    db = res.target.result;
+                    console.log("request upgrade");
+                    
+                    let objectStore = db.createObjectStore( dbTable, {keyPath: primaryKey});
+                    //objectStore.createIndex(candidateKey, candidateKey, { unique: true });
+                }
+            });
+        } else {
+            return Promise.resolve();
+        }
+    };
+    loadDB();
+    
 
     return {
         write: function(objects) {
-            return new Promise(function(resolve, reject) {
+            return loadDB().then(()=> new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                 transaction.oncomplete = ()=> { //callback
                     console.log("transaction success");
@@ -412,12 +419,12 @@ var idDB = (function() {
                 objects.forEach(object => {
                     objectStore.add(object);
                 });
-            });
+            }));
         },
         read: function(keys) {
             var objects = [];
 
-            return new Promise(function(resolve, reject) {
+            return loadDB().then(()=> new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
                 transaction.oncomplete = ()=> {
                     console.log("transaction success");
@@ -437,15 +444,15 @@ var idDB = (function() {
                         }
                     };
                 });
-            });
+            }));
         },
         isExist: function() {
-            return new Promise(function(resolve, reject) {
-                let objectStore = db.transaction(dbTable, "readonly").objectStore(dbTable);
-                objectStore.count().onsuccess = function(event) {
-                    resolve(event.target.result !== 0);
-                };
-            });
+            return loadDB().then(()=> new Promise(function(resolve, reject) {
+                    let objectStore = db.transaction(dbTable, "readonly").objectStore(dbTable);
+                    objectStore.count().onsuccess = function(event) {
+                        resolve(event.target.result !== 0);
+                    };
+                }));
         }
     }
     
