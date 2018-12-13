@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.2.1 - 2018-12-12
+ * steamCb - v0.3.0 - 2018-12-14
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -28,39 +28,97 @@ SteamCb.prototype = function() {
             this.$trashbox = this.$document.find("#cb-trashbox");
         },
         _setEvent = function() {
-            let that = this; //To keep the scope within the callback
-            /* Informs it is loading. */
-            this.spinner.spin();
-            this.$head.append(this.spinner.el);
-            
+            let that = this, //To keep the scope within the callback
+                searchList = sessionStorage.getItem("searchList");
+
             /* Preheat GinfoBuilder */ 
-            GinfoBuilder
+            (function ($head) {
+                let spinner = new Spinner(spinner_opts).spin();
+                $head.append( $(spinner.el).css("display","inline") );
+
+                GinfoBuilder
                     .preheat() //async
                     .then(() => {
-                        console.log("preheat");
-                        that.$head.find("input.cb-header-searchBar")
+                        $head.find("input.cb-header-searchBar")
                                 .removeAttr("disabled");
-                        
-                        _loadPrevious.call(this);
-                        that.spinner.stop(); })
+                        spinner.stop();
+
+                        _loadPrevious.call(that);
+
+                        if(!searchList) {
+                            spinner.spin();
+                            $head.append( $(spinner.el).css("display","inline") );                            
+
+                            const dataType = function(value) {
+                                return {label: value.name, gid: value.gid};
+                            };
+                            idDB.readAll(dataType).then(res => {
+                                searchList = res;
+                                sessionStorage.setItem("searchList", JSON.stringify(res));
+
+                                console.log("Load search list.");
+                                spinner.stop();
+                            });
+                        } else {
+                            searchList = JSON.parse(searchList);
+                        }
+
+                        console.log("preheat"); })
                     .catch(e=> console.error(e));
+            })(this.$head);
+
+            /* Search bar */
+            (function ($search_bar, $article) {
+                let gids = [];
+
+                $search_bar
+                    .attr("disabled","disabled")
+                    .autocomplete({
+                        /* Auto complete search */
+                        source : function(request, response) {
+                            response( $.ui.autocomplete.filter(
+                                searchList, (request.term).split( /,\s*/ ).pop()
+                            ));
+                        },
+                        search : function() {
+                            // Search from 5 letters or more.
+                            let term = (this.value).split( /,\s*/ ).pop();
+                            if(term.length < 5) {
+                                return false;
+                            }
+                        },
+                        select : function(_, ui) {
+                            let terms = (this.value).split( /,\s*/ );
+                            terms.pop();
+                            terms.push( ui.item.label );
+                            gids.push( ui.item.gid );
+                            terms.push("");
+                            this.value = terms.join(", ");
+                            return false;
+                        }  
+                    })
+                    .on("keydown", function (key) {
+                        if(key.keyCode == 13) { //enter-key
+                            if(gids.length === 0) {
+                                /* search by gids */
+                                gids = $(this).val().split(",").map(gid=>gid.trim()).filter(gid=> (/^[0-9]*$/).test(gid));
+                            }
+
+                            if(!$article.children("table").length) {//no table
+                                _addTable.call(that);
+                            }
+                            _addGames.call(that, gids.slice()); 
+                            gids = [/*empty*/];
+                            $(this).val(""); }
+                    });
+            })(this.$head.find("input.cb-header-searchBar"), this.$article);
+            
 
   
             /* Connect the tables and apply the sortable */
             this.$document.find(".cb-connectedSortable")
                     .sortable({ cancel: ".cb-sortable-disabled",
                                 connectWith: ".cb-connectedSortable" });
-
-            /* Search bar */
-            this.$head.find("input.cb-header-searchBar")
-                    .on("keydown", function (key) {
-                        if(key.keyCode == 13) {
-                            let gids = $(this).val().split(',').map(gid => gid.trim());
-
-                            if(!that.$article.children("table").length) { //no table
-                                _addTable.call(that); }
-                            _addGames.call(that, gids); }})
-                    .attr("disabled","disabled");
             
             /* Add a table */
             this.$head.find("button.cb-header-addTable")
@@ -76,7 +134,7 @@ SteamCb.prototype = function() {
             /* Erase */
             this.$head.find("button.cb-delete-button")
                     .on("click", function() { 
-                        that.$article.not("tr.cb-sortable-disabled").remove();
+                        that.$article.children().not("tr.cb-sortable-disabled").remove();
                         sessionStorage.setItem("command", []); });    
             
             /* Erase the trashbox */
@@ -119,27 +177,30 @@ SteamCb.prototype = function() {
 
             
             /* Intercept Console */
-            var console_capture = function() {
-                    window.console.log = function(msg) {
-                        that.$message.append(msg + "<br>"); };
-                    window.console.error = function(msg) {
-                        that.$message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
-                console_release = function() {
-                        let i = document.createElement('iframe');
-                        i.style.display = 'none';
-                        document.body.appendChild(i);
-                        window.console = i.contentWindow.console;
+            (function ($message) {
+                var console_capture = function() {
+                            window.console.log = function(msg) {
+                                $message.append(msg + "<br>"); };
+                            window.console.error = function(msg) {
+                                $message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
+                    console_release = function() {
+                            let i = document.createElement('iframe');
+                            i.style.display = 'none';
+                            document.body.appendChild(i);
+                            window.console = i.contentWindow.console;
                 };
-            if(this.$message.find("input:checkbox").is(":checked")) {
-                console_capture.call(this);
-            }
-            this.$message.find("input:checkbox")
-                    .on("change", function() {
-                        if($(this).is(":checked")) {
-                            console_capture.call(that);
-                        } else {
-                            console_release.call(that);
-                        } });
+                if($message.find("input:checkbox").is(":checked")) {
+                    console_capture.call(that);
+                }
+                $message.find("input:checkbox")
+                        .on("change", function() {
+                            if($(this).is(":checked")) {
+                                console_capture.call(that);
+                            } else {
+                                console_release.call(that);
+                            } });
+            })(this.$message);
+
 
             /* Record $article's contents in sessionStorage */
             var contents_recording = function() {
@@ -211,8 +272,9 @@ SteamCb.prototype = function() {
             console.log("A table has been added");
         },
         _addGames = function(gids) {
-            this.spinner.spin(); //new
-            this.$head.append(this.spinner.el);
+            let spinner = new Spinner(spinner_opts).spin();
+            spinner.spin(); //new
+            this.$head.append( $(spinner.el).css("display","inline") );
 
             GinfoBuilder //async
                 .build(gids)
@@ -271,7 +333,7 @@ SteamCb.prototype = function() {
                     });
                 })
                 .catch(error => console.log(error))
-                .then(()=> this.spinner.stop());
+                .then(()=> spinner.stop());
         };
 
     const spinner_opts = {
@@ -289,8 +351,8 @@ SteamCb.prototype = function() {
         direction: 1, // 1: clockwise, -1: counterclockwise
         zIndex: 2e9, // The z-index (defaults to 2000000000)
         className: 'spinner', // The CSS class to assign to the spinner
-        top: '-12px', // Top position relative to parent
-        left: '270px', // Left position relative to parent
+        top: '4px', // Top position relative to parent
+        left: '1px', // Left position relative to parent
         shadow: '0 0 1px transparent', // Box-shadow for the lines
         position: 'relative' // Element positioning
         };
@@ -303,7 +365,6 @@ SteamCb.prototype = function() {
          * @param  {string} arg.style */
         init : function(arg) {
             this.theme = themeCollection(arg); //new
-            this.spinner = new Spinner(spinner_opts);
             _setLayout.call(this);
             _setEvent.call(this);
             this.el = this.$document;

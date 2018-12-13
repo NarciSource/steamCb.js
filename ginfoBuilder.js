@@ -426,14 +426,14 @@ var idDB = (function() {
 
             return loadDB().then(()=> new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
-                transaction.oncomplete = ()=> {
-                    console.log("transaction success");
-                    resolve(objects);
-                }
-                transaction.onerror = () => {
-                    console.error("transaction error");
-                    reject();
-                }
+                    transaction.oncomplete = ()=> {
+                        console.log("transaction success");
+                        resolve(objects);
+                    }
+                    transaction.onerror = () => {
+                        console.error("transaction error");
+                        reject();
+                    }
                 let objectStore = transaction.objectStore(dbTable);
 
                 keys.forEach(key => {
@@ -444,6 +444,30 @@ var idDB = (function() {
                         }
                     };
                 });
+            }));
+        },
+        readAll: function(dataType) {
+            var objects = [];
+
+            return loadDB().then(()=> new Promise(function(resolve, reject) {
+                let transaction = db.transaction(dbTable, "readwrite");
+                    transaction.oncomplete = ()=> {
+                        console.log("transaction success");
+                    }
+                    transaction.onerror = () => {
+                        console.error("transaction error");
+                    }
+                let objectStore = transaction.objectStore(dbTable);
+                objectStore.openCursor().onsuccess = function(event) {
+                    var cursor = event.target.result;
+                    if( cursor ) {
+                        objects.push( dataType(cursor.value) );
+                        cursor.continue();
+                    } else {
+                        resolve(objects);
+                    }
+                    
+                }
             }));
         },
         isExist: function() {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         steamCb ITCM Helper
 // @namespace    steamCb
-// @version      0.1.4
+// @version      0.1.5
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -33,32 +33,20 @@ var steamCb;
 if( $(location).attr('href').match(/itcm.co.kr/)) {
 
     // Create a pop-up access button at the top
-    $(`<li><a class="login_A eevee">
+    $(`<li><a class="login_A">
             <label id="lb-chart-make" style="cursor:pointer">차트만들기</label>
-            <i title="Pop-Up" class="xi-toggle-on highlight" for="cb1"/>
         </a></li>`)
             .insertBefore($('li.first_login'))
             .children().children().first()
                 .click(function() {
                     if(!steamCb) {
                         steamCb = new SteamCb({outline: "popup", style: localStorage.getItem("theme")});
-                        $("div.column_login").after(steamCb.el);
+                        $("body").after(steamCb.el);
                     }
 
-                    // If pop-up is checked
-                    if($(this).next().hasClass("xi-toggle-on")) {
-                        steamCb.popUp({width:550, height:750});
-                    } else {
-                        steamCb.popDelete();
-                    }
-                })
-            .next()
-                .attr("style","cursor:pointer;margin:-3px")
-                .click(function() {
-                    $(this).toggleClass("xi-toggle-on")
-                            .toggleClass("highlight")
-                            .toggleClass("xi-toggle-off");
+                    steamCb.popUp({width:550, height:750});
                 });
+
     $("div.column_login").after((new SteamCb({outline: "side", style: "itcm"})).el);
         
             
@@ -68,11 +56,11 @@ if( $(location).attr('href').match(/itcm.co.kr/)) {
             .insertBefore($("div.steam_read_selected table"))
             .click(() => {
                 let gids = $(".steam_read_selected tbody .app > .item_image")
-                            .map((idx, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
+                            .map((_, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
                             .toArray();
                 if(!steamCb) {
-                    steamCb = new SteamCb({outline: "popup", style: "eevee"});
-                    $(".column_login").after(steamCb.el);
+                    steamCb = new SteamCb({outline: "popup", style: localStorage.getItem("theme")});
+                    $("body").after(steamCb.el);
                 }
 
                 steamCb.popUp({width:550, height:750});
