@@ -14,7 +14,7 @@ var themeCollection = function(arg) {
             head : $(`<div id="cb-header">
                     </div>`),
             search : $(`<label>검색  </label>
-                        <input type="search" class="cb-header-searchBar" placeholder=" Appid 입력 후 엔터"/>`),
+                        <input type="search" class="cb-header-searchBar" placeholder="게임명 or Appid"/>`),
             select : $(`<select>
                             <option>eevee</option>
                             <option>sg</option>
@@ -37,6 +37,7 @@ var themeCollection = function(arg) {
                                     <tr class="cb-sortable-disabled"><td>-</td></tr>
                                 </tbody>
                             </table>
+                            <button class="cb-aside-reset">초기화</button>
                         </div>`),
                         
             message : $(`<div id="cb-message">
@@ -44,25 +45,40 @@ var themeCollection = function(arg) {
                         </div>`)
         },
         table_outline = {
-            base : $(`<table class="cb-table">
-                        <thead><tr/></thead>
+            table : $(`<table class="cb-table">
+                        <thead><tr>
+                            <th name="game">Game</th>
+                            <th name="ratings">Ratings</th>
+                            <th name="cards">Cards</th>
+                            <th name="archv">Archv</th>
+                            <th name="bdl">BDL</th>
+                            <th name="lowest">Lowest</th>
+                            <th name="retail">Retail</th>
+                        </tr></thead>
                         <tbody/>
                     </table>`),
-            th_name : $(`<th name="game">Game</th>`),
-            th_ratings : $(`<th name="ratings">Ratings</th>`),
-            th_cards : $(`<th name="cards">Cards</th>`),
-            th_archv : $(`<th name="archv">Archv</th>`),
-            th_bdl : $(`<th name="bdl">BDL</th>`),
-            th_lowest : $(`<th name="lowest">Lowest</th>`),
-            th_retail : $(`<th name="retail">Retail</th>`),
-
-            td_name : $(`<td name="game">?</td>`),
-            td_ratings : $(`<td name="ratings">?</td>`),
-            td_cards : $(`<td name="cards">?</td>`),
-            td_archv : $(`<td name="archv">?</td>`),
-            td_bdl : $(`<td name="bdl">?</td>`),
-            td_lowest : $(`<td name="lowest">?</td>`),
-            td_retail : $(`<td name="retail">?</td>`)
+            table_short : $(`<table class="cb-table">
+                                <thead><tr>
+                                    <th name="game">Game</th>
+                                    <th name="cards">C</th>
+                                    <th name="archv">A</th>
+                                    <th name="bdl">B</th>
+                                    <th name="lowest">Lowest</th>
+                                </tr></thead>
+                                <tbody/>
+                            </table>`),
+            record : $(`<tr><td name="game">?</td>
+                            <td name="ratings">?</td>
+                            <td name="cards">?</td>
+                            <td name="archv">?</td>
+                            <td name="bdl">?</td>
+                            <td name="lowest">?</td>
+                            <td name="retail">?</td></tr>`),
+            record_short : $(`<tr><td name="game">?</td>
+                                <td name="cards">?</td>
+                                <td name="archv">?</td>
+                                <td name="bdl">?</td>
+                                <td name="lowest">?</td></tr>`),
         },
         default_style = {
             header : $(`<style type="text/css">
@@ -87,6 +103,10 @@ var themeCollection = function(arg) {
                             border-top : 1px solid #CCC;
                             border-bottom : 1px solid #CCC;
                         }
+                        #cb-header input[type='search'] {
+                            padding : 0px 5px;
+                            width : 180px;
+                        } 
                         #cb-header button.cb-header-addTable {
                             float : right;
                         }
@@ -110,6 +130,7 @@ var themeCollection = function(arg) {
                             overflow : auto;
                         }
                         #cb-aside {
+                            position : relative;
                             float : right;
                             width : 80px;
                             height : calc(100% - 200px);
@@ -117,16 +138,11 @@ var themeCollection = function(arg) {
                             overflow-x : hidden;
                             overflow-y : auto;
                         }
-                        #cb-message {
-                            clear : both;
-                            height : 100px;
-                            padding : 10px;
-                            border : .5px solid #CCC;
-                            overflow : auto;
-                            word-break : break-all;
-                        }
-                        #cb-message input[type='checkbox'] {
-                            float : right;
+                        #cb-aside .cb-aside-reset {
+                            position : absolute;
+                            bottom : 0px;
+                            margin : 10px;
+                            padding: 7px 12px;
                         }
                         #cb-trashbox {
                             min-width : 80px;
@@ -147,6 +163,18 @@ var themeCollection = function(arg) {
                         #cb-trashbox td:not(:first-child) {
                             display:none;
                         }
+                        #cb-message {
+                            clear : both;
+                            height : 100px;
+                            padding : 10px;
+                            border : .5px solid #CCC;
+                            overflow : auto;
+                            word-break : break-all;
+                        }
+                        #cb-message input[type='checkbox'] {
+                            float : right;
+                        }
+                        .ui-autocomplete { z-index:120 !important;}  
                         </style>`) },
         itcm_style = {
             table :`border-collapse : collapse;
@@ -241,21 +269,8 @@ var themeCollection = function(arg) {
                                                                 window_outline.article_popup,
                                                                 window_outline.aside,
                                                                 window_outline.message]);
-            result.outline.table = table_outline.base;
-            table_outline.base.find("tr").append([table_outline.th_name,
-                                                table_outline.th_ratings,
-                                                table_outline.th_cards,
-                                                table_outline.th_archv,
-                                                table_outline.th_bdl,
-                                                table_outline.th_lowest,
-                                                table_outline.th_retail]);
-            result.outline.record = $(`<tr/>`).append([table_outline.td_name,
-                                                        table_outline.td_ratings,
-                                                        table_outline.td_cards,
-                                                        table_outline.td_archv,
-                                                        table_outline.td_bdl,
-                                                        table_outline.td_lowest,
-                                                        table_outline.td_retail]);
+            result.outline.table = table_outline.table;
+            result.outline.record = table_outline.record;
             break;
         case "side":
         default:
@@ -263,17 +278,8 @@ var themeCollection = function(arg) {
                                         window_outline.delete]);
             result.outline.window = window_outline.base.append([window_outline.head,
                                                                 window_outline.article_side]);
-            result.outline.table = table_outline.base;
-            table_outline.base.find("tr").append([table_outline.th_name,
-                                            table_outline.th_cards,
-                                            table_outline.th_archv,
-                                            table_outline.th_bdl,
-                                            table_outline.th_lowest]);
-            result.outline.record = $(`<tr/>`).append([table_outline.td_name,
-                                                        table_outline.td_cards,
-                                                        table_outline.td_archv,
-                                                        table_outline.td_bdl,
-                                                        table_outline.td_lowest]);
+            result.outline.table = table_outline.table_short;
+            result.outline.record = table_outline.record_short;
             break;
     }
 

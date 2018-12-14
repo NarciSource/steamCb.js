@@ -1,5 +1,5 @@
 /**
- * GinfoBuilder - v0.2.2 - 2018-12-12
+ * GinfoBuilder - v0.2.3 - 2018-12-12
  * https://github.com/NarciSource/ginfoBuilder.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -60,7 +60,6 @@ GinfoBuilder = (function() {
      * @typedef {gdata[]} glist
      * @typedef {{name:string, plain:string, achievements:boolean}} ginfoEX
      * @typedef {ginfoEX[]} glistEX
-     * @typedef {{gid: ginfoEX}} gbundleEX
      */
         
 
@@ -186,7 +185,7 @@ GinfoBuilder = (function() {
      *  @return      {Promise<boolean>} */
     function loadBase() {
         return new Promise(function(resolve, reject) {
-            idDB.isExist().then(isExist => {
+            idxDB.isExist().then(isExist => {
                 if(isExist) {
                     resolve(true);                        
                 } else {
@@ -195,7 +194,7 @@ GinfoBuilder = (function() {
                         .then(res => {
                             console.log("externalLoad");
                             /* Write the data in DB */
-                            idDB.write( res ) //async
+                            idxDB.write( res ) //async
                                 .then(()=>{/*success*/})
                                 .catch(()=>{/*error*/});
                             resolve(true);
@@ -215,7 +214,7 @@ GinfoBuilder = (function() {
     function gidSelector(rqst_gids) {
         const need_gids = rqst_gids.filter(gid => !cache.get(gid));
         
-        return  idDB.read(need_gids)
+        return  idxDB.read(need_gids)
                     .then(glist => {
                         console.log("request gids: "+rqst_gids+" ("+
                                     "recycle: "+rqst_gids.filter(gid=>cache.get(gid))+" "+
@@ -358,7 +357,7 @@ GinfoBuilder = (function() {
 
 
 
-var idDB = (function() {
+var idxDB = (function() {
     window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
     window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction;
     window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange
@@ -477,6 +476,14 @@ var idDB = (function() {
                         resolve(event.target.result !== 0);
                     };
                 }));
+        },
+        clear: function() {
+            loadDB().then(()=> new Promise(function(resolve, reject) {
+                let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
+                objectStore.clear().onsuccess = function() {
+                    console.log("transaction success");
+                }
+            }));
         }
     }
     

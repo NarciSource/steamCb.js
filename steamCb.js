@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.3.0 - 2018-12-14
+ * steamCb - v0.3.1 - 2018-12-14
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -45,6 +45,7 @@ SteamCb.prototype = function() {
 
                         _loadPrevious.call(that);
 
+                        searchList = localStorage.getItem("searchList");
                         if(!searchList) {
                             spinner.spin();
                             $head.append( $(spinner.el).css("display","inline") );                            
@@ -52,9 +53,9 @@ SteamCb.prototype = function() {
                             const dataType = function(value) {
                                 return {label: value.name, gid: value.gid};
                             };
-                            idDB.readAll(dataType).then(res => {
+                            idxDB.readAll(dataType).then(res => {
                                 searchList = res;
-                                sessionStorage.setItem("searchList", JSON.stringify(res));
+                                localStorage.setItem("searchList", JSON.stringify(res));
 
                                 console.log("Load search list.");
                                 spinner.stop();
@@ -175,6 +176,16 @@ SteamCb.prototype = function() {
                         console.log("Copy");
                         document.execCommand("Copy");});
 
+            /* Reset DB and stroage */
+            this.$aside.find(".cb-aside-reset")
+                    .on("click", function () {
+                        idxDB.clear();
+                        sessionStorage.clear();
+                        localStorage.clear();
+                        that.$head.find("input.cb-header-searchBar")
+                            .attr("disabled","disabled");
+                    });
+
             
             /* Intercept Console */
             (function ($message) {
@@ -229,7 +240,7 @@ SteamCb.prototype = function() {
             }
         },
         _popUp = function(arg) {
-            arg = arg || {width:550, height:750}; //default
+            arg = arg || {width:610, height:750}; //default
             
             if(!this.$document.hasClass("ui-dialog")) {
                 this.$document
@@ -318,14 +329,21 @@ SteamCb.prototype = function() {
                             $("<a/>").attr("href", ginfo.url_bundles).text(ginfo.bundles));
 
                         /* lowest field */
-                        $record.find(`td[name="lowest"]`).html(
-                            $("<a/>").attr("href", ginfo.url_history)
-                                     .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')));
+                        $record.find(`td[name="lowest"]`).html((val => {
+                            switch(val) {
+                                case "?" : return "?";
+                                default : return $("<a/>").attr("href", ginfo.url_history)
+                                                    .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                            }})(ginfo.lowest_price));                            
                         
                         /* retail field */
-                        $record.find(`td[name="retail"]`).html(
-                            $("<a/>").attr("href", ginfo.url_price_info)
-                            .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')));
+                        $record.find(`td[name="retail"]`).html((val => {
+                            switch(val) {
+                                case "?" : return "?";
+                                default : return  $("<a/>").attr("href", ginfo.url_price_info)
+                                                    .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                            }})(ginfo.retail_price));
+                           
 
 
                         $record.attr("name","gid-"+ginfo.gid)
