@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.3.1 - 2018-12-14
+ * steamCb - v0.3.2 - 2018-12-16
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -32,41 +32,44 @@ SteamCb.prototype = function() {
                 searchList = sessionStorage.getItem("searchList");
 
             /* Preheat GinfoBuilder */ 
-            (function ($head) {
+            (async function ($head) {
+                /* 1st. GinfoBuilder preheat */
                 let spinner = new Spinner(spinner_opts).spin();
                 $head.append( $(spinner.el).css("display","inline") );
 
-                GinfoBuilder
-                    .preheat() //async
-                    .then(() => {
-                        $head.find("input.cb-header-searchBar")
-                                .removeAttr("disabled");
-                        spinner.stop();
+                await GinfoBuilder.preheat();
+                console.log("preheat");
 
-                        _loadPrevious.call(that);
+                $head.find("input.cb-header-searchBar")
+                        .removeAttr("disabled");
+                spinner.stop();
 
-                        searchList = localStorage.getItem("searchList");
-                        if(!searchList) {
-                            spinner.spin();
-                            $head.append( $(spinner.el).css("display","inline") );                            
 
-                            const dataType = function(value) {
-                                return {label: value.name, gid: value.gid};
-                            };
-                            idxDB.readAll(dataType).then(res => {
-                                searchList = res;
-                                localStorage.setItem("searchList", JSON.stringify(res));
+                /* 2nd. Return previous memory */
+                _loadPrevious.call(that);
 
-                                console.log("Load search list.");
-                                spinner.stop();
-                            });
-                        } else {
-                            searchList = JSON.parse(searchList);
-                        }
+                
+                /* 3rd. SearchList preheat */
+                new Spinner(spinner_opts).spin();
+                $head.append( $(spinner.el).css("display","inline") );      
 
-                        console.log("preheat"); })
-                    .catch(e=> console.error(e));
+                searchList = localStorage.getItem("searchList");
+                if(!searchList) {
+                    const dataType = function(value) {
+                        return {label: value.name, gid: value.gid};
+                    };
+                    searchList = await idxDB.readAll(dataType);
+                    localStorage.setItem("searchList", JSON.stringify(res));
+
+                    console.log("Load search list.");
+                } else {
+                    searchList = JSON.parse(searchList);
+                }
+                
+                spinner.stop();
+
             })(this.$head);
+
 
             /* Search bar */
             (function ($search_bar, $article) {
@@ -282,76 +285,76 @@ SteamCb.prototype = function() {
 
             console.log("A table has been added");
         },
-        _addGames = function(gids) {
+        _addGames = async function(gids) {
             let spinner = new Spinner(spinner_opts).spin();
             spinner.spin(); //new
             this.$head.append( $(spinner.el).css("display","inline") );
 
-            GinfoBuilder //async
-                .build(gids)
-                .then(glist => {
-                    glist.forEach(ginfo => {
-                        let $record = this.theme.outline.record.clone(); //new
-                        
-                        $record.find("td").attr("style", this.theme.style.td)
-                               .first().attr("style", this.theme.style.td+this.theme.style.tdf)
-                               .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
-                        
-                        /* game field */
-                        $record.find(`td[name="game"]`).html( 
-                            $("<a/>").attr("href", ginfo.url_store).text(ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")));
+            const glist = await GinfoBuilder.build(gids);
+            try {
+                glist.forEach(ginfo => {
+                    let $record = this.theme.outline.record.clone(); //new
+                    
+                    $record.find("td").attr("style", this.theme.style.td)
+                            .first().attr("style", this.theme.style.td+this.theme.style.tdf)
+                            .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
+                    
+                    /* game field */
+                    $record.find(`td[name="game"]`).html( 
+                        $("<a/>").attr("href", ginfo.url_store).text(ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")));
 
-                        /* ratings field */
-                        $record.find(`td[name="ratings"]`).html((val => {
-                            switch(val) {
-                                case "?" : return "?";
-                                default : return $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)");
-                            }})(ginfo.reviews_text));
+                    /* ratings field */
+                    $record.find(`td[name="ratings"]`).html((val => {
+                        switch(val) {
+                            case "?" : return "?";
+                            default : return $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)");
+                        }})(ginfo.reviews_text));
+                    
+                    /* cards field */
+                    $record.find(`td[name="cards"]`).html((val => {
+                        switch(val) {
+                            case "?" : return "?";
+                            case false : return "-";
+                            case true : return $("<a/>").attr("href", ginfo.url_cards).html("❤");
+                        }})(ginfo.trading_cards));
+
+                    /* achievements field */
+                    $record.find(`td[name="archv"]`).html((val => {
+                        switch(val) {
+                            case "?" : return "?";
+                            case false : return "-";
+                            case true : return $("<a/>").attr("href", ginfo.url_archv).text("▨");
+                        }})(ginfo.achievements));
+                    
+                    /* bundles field */
+                    $record.find(`td[name="bdl"]`).html(
+                        $("<a/>").attr("href", ginfo.url_bundles).text(ginfo.bundles));
+
+                    /* lowest field */
+                    $record.find(`td[name="lowest"]`).html((val => {
+                        switch(val) {
+                            case "?" : return "?";
+                            default : return $("<a/>").attr("href", ginfo.url_history)
+                                                .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                        }})(ginfo.lowest_price));                            
+                    
+                    /* retail field */
+                    $record.find(`td[name="retail"]`).html((val => {
+                        switch(val) {
+                            case "?" : return "?";
+                            default : return  $("<a/>").attr("href", ginfo.url_price_info)
+                                                .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                        }})(ginfo.retail_price));
                         
-                        /* cards field */
-                        $record.find(`td[name="cards"]`).html((val => {
-                            switch(val) {
-                                case "?" : return "?";
-                                case false : return "-";
-                                case true : return $("<a/>").attr("href", ginfo.url_cards).html("❤");
-                            }})(ginfo.trading_cards));
-
-                        /* achievements field */
-                        $record.find(`td[name="archv"]`).html((val => {
-                            switch(val) {
-                                case "?" : return "?";
-                                case false : return "-";
-                                case true : return $("<a/>").attr("href", ginfo.url_archv).text("▨");
-                            }})(ginfo.achievements));
-                        
-                        /* bundles field */
-                        $record.find(`td[name="bdl"]`).html(
-                            $("<a/>").attr("href", ginfo.url_bundles).text(ginfo.bundles));
-
-                        /* lowest field */
-                        $record.find(`td[name="lowest"]`).html((val => {
-                            switch(val) {
-                                case "?" : return "?";
-                                default : return $("<a/>").attr("href", ginfo.url_history)
-                                                    .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
-                            }})(ginfo.lowest_price));                            
-                        
-                        /* retail field */
-                        $record.find(`td[name="retail"]`).html((val => {
-                            switch(val) {
-                                case "?" : return "?";
-                                default : return  $("<a/>").attr("href", ginfo.url_price_info)
-                                                    .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
-                            }})(ginfo.retail_price));
-                           
 
 
-                        $record.attr("name","gid-"+ginfo.gid)
-                               .appendTo(this.$article.find("tbody").last());
-                    });
-                })
-                .catch(error => console.log(error))
-                .then(()=> spinner.stop());
+                    $record.attr("name","gid-"+ginfo.gid)
+                            .appendTo(this.$article.find("tbody").last());
+                });
+            } catch(err) {
+                console.error(err);
+            }
+            spinner.stop();
         };
 
     const spinner_opts = {
@@ -394,10 +397,8 @@ SteamCb.prototype = function() {
         addGames : function(gids){ 
             if(!this.$article.children("table").length) //no table
                _addTable.call(this);
-            GinfoBuilder
-                .preheat()
-                .then(()=> 
-                    _addGames.call(this, gids)  );
+               
+            _addGames.call(this, gids);
         }
     };
 }();

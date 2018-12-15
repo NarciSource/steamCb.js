@@ -1,5 +1,5 @@
 /**
- * GinfoBuilder - v0.2.3 - 2018-12-12
+ * GinfoBuilder - v0.2.4 - 2018-12-16
  * https://github.com/NarciSource/ginfoBuilder.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -10,7 +10,6 @@
  * @method      GinfoBuilder
  * @description Makes information about the steam games.
  *              It is IIFE. It has three methods - build, getProduct, clear.
- * @example     GinfoBuilder.build(in-gids).then(out-gids, out-ginfo_bundle] => callback)
  */
 GinfoBuilder = (function() {
     /** @class       Ginfo
@@ -114,96 +113,60 @@ GinfoBuilder = (function() {
     /** @function    externalLoad (async)
      *  @description Load basic data from steam and itad api.
      *  @return      {Promise<glist>} Regular name and plain based on gid. */
-    function externalLoad() {
-            /* Load from Steam api */
-        let loadAppList = getSteamworksAppList() 
-                .then(res=> {
-                    let data = {/*gid:full_name*/};
-                    res.applist.apps.app.forEach(app=> {
-                        data[app.appid] = app.name;
-                    });
+    async function externalLoad() {
+        /* Load from Steam api */
+        try {
+            var applist = await getSteamworksAppList();
+            applist = applist.applist.apps.app;
 
-                    console.log("Loads all steam applist.");
-                    console.log("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
-                                res.applist.apps.app.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
-                                
-                    return Promise.resolve(data);
-                })
-                .catch(err=> {
-                    console.log(err);
-                    console.error("Steam api is inaccessible. "+ 
-                                err.status + " " + err.statusText);
-                    return Promise.reject(); 
-                }),
-
-
-            /* Load from ITAD api */
-            loadPlainList = getITADPlainList()
-                .then(res=> {
-                    let data = {/*gid:plane_name*/};
-                    Object.keys(res.data.steam).filter(gid => gid.match("app")).map(gid => {
-                        const appid = gid.match(/[0-9]+/);
-                        data[appid] = res.data.steam[gid];
-                    });
-
-                    console.log("Loads itad steam game's plain list");
-                    
-                    return Promise.resolve(data);
-                })
-                .catch(err=> {
-                    console.error("ITAD api is inaccessible. "+ 
+            console.log("Loads all steam applist.");
+            console.log("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
+                        applist.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
+        } catch(err) {
+            console.error("Steam api is inaccessible. "+ 
                         err.status + " " + err.statusText);
-                    return Promise.reject();
-                });
 
+            return [/*empty*/];
+        }
 
-            /* Combining the both data */
-        return Promise.all([loadAppList, loadPlainList])
-                .then(([full_name, plain_name]) => {
-                    let intersection_gid = Object.keys(full_name)
-                                            .concat(Object.keys(plain_name))
-                                            .sort()
-                                            .reduce((pre, gid, i, self) => {
-                                                if(i && self[i-1] === gid) //twice
-                                                    pre.push(gid);
-                                                return pre;
-                                            } , [/*init*/]);
+        /* Load from ITAD api */
+        try {
+            var plainlist = await getITADPlainList();
 
-                    let combined_data = intersection_gid
-                                            .filter(gid => full_name[gid] && plain_name[gid])
-                                            .map(gid => {
-                                                return {  gid: gid,
-                                                        name: full_name[gid],
-                                                        plain: plain_name[gid] }; });
-                    return combined_data;
-                });
+            console.log("Loads itad steam game's plain list");
+        } catch(err) {
+            console.error("ITAD api is inaccessible. "+ 
+                        err.status + " " + err.statusText);
+
+            return [/*empty*/];
+        }
+        
+        /* Combining the both data */
+        return applist.map(app=> ({
+            gid: String(app.appid),
+            name: app.name,
+            plain: plainlist.data.steam["app/"+app.appid] })
+        );
     };
 
 
     /** @function    loadBase (async)
      *  @description Check whether there is data in db, and if not, load it.
      *  @return      {Promise<boolean>} */
-    function loadBase() {
-        return new Promise(function(resolve, reject) {
-            idxDB.isExist().then(isExist => {
-                if(isExist) {
-                    resolve(true);                        
-                } else {
-                    /* Import data from outside */
-                    externalLoad()
-                        .then(res => {
-                            console.log("externalLoad");
-                            /* Write the data in DB */
-                            idxDB.write( res ) //async
-                                .then(()=>{/*success*/})
-                                .catch(()=>{/*error*/});
-                            resolve(true);
-                        })
-                        .catch(() => reject("Error in ExternalLoad"));
-                }
-            })
-            .catch(()=> reject("Error in isExist of IndexedDB.") );
-        }); 
+    async function loadBase() {
+        try {
+            if( await idxDB.isExist() ) {
+                return true;
+            } else {
+                /* Import data from outside */
+                const glist = await externalLoad();
+                /* Write the data in DB */
+                idxDB.write( glist );
+                return true;
+            }
+        } catch(_) { 
+            console.error("Error in isExist of IndexedDB."); 
+        }
     };
 
 
@@ -211,17 +174,16 @@ GinfoBuilder = (function() {
      *  @description Select gids that are no errors and needs to be updated.
      *  @param       {gids} rqst_gids   Gids requested by the user.
      *  @return      {Promise<glist>} */
-    function gidSelector(rqst_gids) {
+    async function gidSelector(rqst_gids) {
         const need_gids = rqst_gids.filter(gid => !cache.get(gid));
         
-        return  idxDB.read(need_gids)
-                    .then(glist => {
-                        console.log("request gids: "+rqst_gids+" ("+
-                                    "recycle: "+rqst_gids.filter(gid=>cache.get(gid))+" "+
-                                    "load: "+glist.map(gdata=>gdata.gid)+" else error)");
+        const glist = await idxDB.read(need_gids);
+        
+        console.log("request gids: "+rqst_gids+" ("+
+                    "recycle: "+rqst_gids.filter(gid=>cache.get(gid))+" "+
+                    "load: "+glist.map(gdata=>gdata.gid)+" else error)");
                         
-                        return glist;
-                    });
+        return glist;
     };
 
 
@@ -229,71 +191,66 @@ GinfoBuilder = (function() {
      *  @description Load more data from itad api.
      *  @param       {glist} glist Base data
      *  @return      {glistEX} Expanded data */
-    function loadMore(glist) {
-        if(glist.length===0) return Promise.resolve(glist);
-        else {
-            let plains = glist.map(gdata => gdata.plain);
+    async function loadMore(glist) {
+        if(glist.length!==0) {
+            const plains = glist.map(gdata => gdata.plain);
 
             /* combine promise */
-            let promises = [getITADPrice(plains.join()), //1)crrent price
-                            getITADInfo(plains.join()), //2)additional information
-                            getITADLowest(plains.join()), //3)lowest price
-                            getITADBundles(plains.join())].map(promise =>  //4)number of bundles
-                                promise.then(d => ({success: true, d}), 
-                                            err => ({success: false, err})));
+            const promises = [getITADPrice(plains.join()), //1)crrent price
+                              getITADInfo(plains.join()), //2)additional information
+                              getITADLowest(plains.join()), //3)lowest price
+                              getITADBundles(plains.join())].map(promise =>  //4)number of bundles
+                                    promise.then(d => ({success: true, d}), 
+                                                err => ({success: false, err})));
             /* load infomation */
-            return Promise.all(promises)
-                .then(([res_price, res_info, res_lowest, res_bundles]) => {
-                    glist.forEach(gdata => {
-                        let plain = gdata.plain;
+            const [res_price, res_info, res_lowest, res_bundles] = await Promise.all(promises);
 
-                        try {
-                            if(res_price.success) {
-                                gdata.retail_price = res_price.d.data[plain].list[0].price_new;
-                            } else throw "";
-                        }catch(e) {
-                            console.error("Can not read the price information.");
-                        }
+            glist.forEach(gdata => {
+                const plain = gdata.plain;
 
-                        try {
-                            if(res_info.success) {
-                                gdata.trading_cards = res_info.d.data[plain].trading_cards;
-                                gdata.achievements = res_info.d.data[plain].achievements;
-                                gdata.url_price_info = res_info.d.data[plain].urls.game;
-                                gdata.reviews_perc = res_info.d.data[plain].reviews.steam.perc_positive;
-                                gdata.reviews_text = res_info.d.data[plain].reviews.steam.text;
-                                gdata.is_dlc = res_info.d.data[plain].is_dlc;
-                                gdata.is_package = res_info.d.data[plain].is_package;
-                            } else throw "";
-                        }catch(e) {
-                            console.log(e);
-                            console.error("Can not read the trading cards and achievemts informaion.");
-                        }
+                try {
+                    if(res_price.success) {
+                        gdata.retail_price = res_price.d.data[plain].list[0].price_new;
+                    } else throw "";
+                }catch(e) {
+                    console.error("Can not read the price information.");
+                }
 
-                        try {
-                            if(res_lowest.success) {
-                                gdata.lowest_price = res_lowest.d.data[plain].price;
-                                gdata.url_history = res_lowest.d.data[plain].urls.history;
-                            } else throw "";
-                        }catch(e) {
-                            console.error("Can not read the lowest price information.");
-                        }
+                try {
+                    if(res_info.success) {
+                        gdata.trading_cards = res_info.d.data[plain].trading_cards;
+                        gdata.achievements = res_info.d.data[plain].achievements;
+                        gdata.url_price_info = res_info.d.data[plain].urls.game;
+                        gdata.reviews_perc = res_info.d.data[plain].reviews.steam.perc_positive;
+                        gdata.reviews_text = res_info.d.data[plain].reviews.steam.text;
+                        gdata.is_dlc = res_info.d.data[plain].is_dlc;
+                        gdata.is_package = res_info.d.data[plain].is_package;
+                    } else throw "";
+                }catch(e) {
+                    console.error("Can not read the trading cards and achievemts informaion.");
+                }
 
-                        try {
-                            if(res_bundles.success) {
-                                gdata.bundles = res_bundles.d.data[plain].total;
-                                gdata.url_bundles = res_bundles.d.data[plain].urls.bundles;
-                            }else throw "";
-                        }catch(e) {
-                            console.error("Can not read the number of bundles information.");
-                        }                               
-                    });
+                try {
+                    if(res_lowest.success) {
+                        gdata.lowest_price = res_lowest.d.data[plain].price;
+                        gdata.url_history = res_lowest.d.data[plain].urls.history;
+                    } else throw "";
+                }catch(e) {
+                    console.error("Can not read the lowest price information.");
+                }
 
-                    return glist; })
-                .catch(err => {
-                    console.error(err);
-                    return {/*empty*/}; });
+                try {
+                    if(res_bundles.success) {
+                        gdata.bundles = res_bundles.d.data[plain].total;
+                        gdata.url_bundles = res_bundles.d.data[plain].urls.bundles;
+                    } else throw "";
+                }catch(e) {
+                    console.error("Can not read the number of bundles information.");
+                }                               
+            });
         }
+
+        return glist;
     };
      
     
@@ -323,9 +280,9 @@ GinfoBuilder = (function() {
          *  @description Build information based on the request gids.
          *  @param       {gids} rqst_gids   Request gids.
          *  @return      {Promise<ginfolist>} Returns collected information.*/
-        build : function(rqst_gids) {
-            return  loadBase().then(()=>
-                    gidSelector(rqst_gids)).then(selcted_glist => 
+        build : async function(rqst_gids) {
+            await   loadBase();
+            return  gidSelector(rqst_gids).then(selcted_glist => 
                     loadMore(selcted_glist)).then(extend_glist => 
                     cache.set(extend_glist)).then(cache =>
                     resultSelector(rqst_gids,cache)).then(result_glist =>
@@ -333,7 +290,7 @@ GinfoBuilder = (function() {
         },
 
         /** @method      preheat (async)
-         *  @description Preparations are necessary before build method.
+         *  @description Preparations. Aggressive Initialization.
          *  @return      {Promise<boolean>} */
         preheat : function() {
             return loadBase();
@@ -398,12 +355,13 @@ var idxDB = (function() {
             return Promise.resolve();
         }
     };
-    loadDB();
     
 
     return {
-        write: function(objects) {
-            return loadDB().then(()=> new Promise(function(resolve, reject) {
+        write: async function(objects) {
+            await loadDB();
+
+            return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                 transaction.oncomplete = ()=> { //callback
                     console.log("transaction success");
@@ -418,12 +376,13 @@ var idxDB = (function() {
                 objects.forEach(object => {
                     objectStore.add(object);
                 });
-            }));
+            });
         },
-        read: function(keys) {
+        read: async function(keys) {
+            await loadDB();
             var objects = [];
 
-            return loadDB().then(()=> new Promise(function(resolve, reject) {
+            return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
                     transaction.oncomplete = ()=> {
                         console.log("transaction success");
@@ -443,12 +402,13 @@ var idxDB = (function() {
                         }
                     };
                 });
-            }));
+            });
         },
-        readAll: function(dataType) {
+        readAll: async function(dataType) {
+            await loadDB();
             var objects = [];
 
-            return loadDB().then(()=> new Promise(function(resolve, reject) {
+            return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                     transaction.oncomplete = ()=> {
                         console.log("transaction success");
@@ -467,23 +427,28 @@ var idxDB = (function() {
                     }
                     
                 }
-            }));
+            });
         },
-        isExist: function() {
-            return loadDB().then(()=> new Promise(function(resolve, reject) {
+        isExist: async function() {
+            await loadDB();
+
+            return new Promise(function(resolve, reject) {
                     let objectStore = db.transaction(dbTable, "readonly").objectStore(dbTable);
                     objectStore.count().onsuccess = function(event) {
                         resolve(event.target.result !== 0);
                     };
-                }));
+                });
         },
-        clear: function() {
-            loadDB().then(()=> new Promise(function(resolve, reject) {
+        clear: async function() {
+            await loadDB();
+
+            return new Promise(function(resolve, reject) {
                 let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
                 objectStore.clear().onsuccess = function() {
                     console.log("transaction success");
+                    resolve();
                 }
-            }));
+            });
         }
     }
     
