@@ -26,53 +26,14 @@ SteamCb.prototype = function() {
             this.$aside = this.$document.find("#cb-aside");
             this.$message = this.$document.find("#cb-message");
             this.$trashbox = this.$document.find("#cb-trashbox");
+
+            $("head").append(this.theme.style.header);
         },
         _setEvent = function() {
-            let that = this, //To keep the scope within the callback
-                searchList = sessionStorage.getItem("searchList");
-
-            /* Preheat GinfoBuilder */ 
-            (async function ($head) {
-                /* 1st. GinfoBuilder preheat */
-                let spinner = new Spinner(spinner_opts).spin();
-                $head.append( $(spinner.el).css("display","inline") );
-
-                await GinfoBuilder.preheat();
-                console.log("preheat");
-
-                $head.find("input.cb-header-searchBar")
-                        .removeAttr("disabled");
-                spinner.stop();
-
-
-                /* 2nd. Return previous memory */
-                _loadPrevious.call(that);
-
-                
-                /* 3rd. SearchList preheat */
-                new Spinner(spinner_opts).spin();
-                $head.append( $(spinner.el).css("display","inline") );      
-
-                searchList = localStorage.getItem("searchList");
-                if(!searchList) {
-                    const dataType = function(value) {
-                        return {label: value.name, gid: value.gid};
-                    };
-                    searchList = await idxDB.readAll(dataType);
-                    localStorage.setItem("searchList", JSON.stringify(res));
-
-                    console.log("Load search list.");
-                } else {
-                    searchList = JSON.parse(searchList);
-                }
-                
-                spinner.stop();
-
-            })(this.$head);
-
+            var that = this; //To keep the scope within the callback
 
             /* Search bar */
-            (function ($search_bar, $article) {
+            (async function ($search_bar, $article) {
                 let gids = [];
 
                 $search_bar
@@ -81,7 +42,7 @@ SteamCb.prototype = function() {
                         /* Auto complete search */
                         source : function(request, response) {
                             response( $.ui.autocomplete.filter(
-                                searchList, (request.term).split( /,\s*/ ).pop()
+                                that.searchList, (request.term).split( /,\s*/ ).pop()
                             ));
                         },
                         search : function() {
@@ -229,18 +190,56 @@ SteamCb.prototype = function() {
             this.$article.on("DOMNodeInserted", contents_recording);
             this.$trashbox.on("DOMNodeInserted", contents_recording);
         },
-        _loadPrevious = function() {
-            if(sessionStorage.getItem("command")) {
-                let command = JSON.parse(sessionStorage.getItem("command"));
-                command.forEach(element => {
-                    switch(element) {
-                        case "table": _addTable.call(this);
-                        break;
-                        default: _addGames.call(this, [element.split("-")[1]]);
-                        break;
-                    }
-                });
+        _preheat = async function() {
+            /* GinfoBuilder preheat */
+            let spinner = new Spinner(spinner_opts).spin();
+            this.$head.append( $(spinner.el).css("display","inline") );
+            {
+                await GinfoBuilder.preheat();
+                console.log("preheat");
+
+                this.$head.find("input.cb-header-searchBar")
+                        .removeAttr("disabled");
             }
+            spinner.stop();
+            
+            /* Return previous memory */
+            spinner.spin();
+            {
+                if(sessionStorage.getItem("command")) {
+                    const command = JSON.parse(sessionStorage.getItem("command"));
+
+                    for( let i=0; i<command.length; i++) {
+                        switch(command[i]) {
+                            case "table": _addTable.call(this);
+                            break;
+                            default: await _addGames.call(this, [command[i].split("-")[1]]);
+                            break;
+                        }
+                    }
+                }
+            }
+            spinner.stop();
+            
+            /* Load search list */
+            spinner.spin();
+            this.$head.append( $(spinner.el).css("display","inline") );
+            {
+                this.searchList = localStorage.getItem("searchList");
+                if(!this.searchList) {
+                    const dataType = function(value) {
+                        return {label: value.name, gid: value.gid};
+                    };
+                    
+                    this.searchList = await idxDB.readAll(dataType);
+                    localStorage.setItem("searchList", JSON.stringify(this.searchList));
+
+                } else {
+                    this.searchList = JSON.parse(this.searchList);
+                }
+                console.log("Load search list.");
+            }
+            spinner.stop();
         },
         _popUp = function(arg) {
             arg = arg || {width:610, height:750}; //default
@@ -386,10 +385,12 @@ SteamCb.prototype = function() {
          * @param  {string} arg.style */
         init : function(arg) {
             this.theme = themeCollection(arg); //new
+
             _setLayout.call(this);
+            _preheat.call(this);
             _setEvent.call(this);
+            
             this.el = this.$document;
-            $("head").append(this.theme.style.header);
         },
         popUp : function(arg) { _popUp.call(this, arg); },
         popDelete : function() { _popDelete.call(this); },

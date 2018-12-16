@@ -268,7 +268,7 @@ GinfoBuilder = (function() {
      *  @param       {glistEX} cache
      *  @return      {glistEX} Selected glist. */
     function resultSelector(rqst_gids, cache) {
-        return rqst_gids.filter(gid => cache.get(gid)).map(gid => cache.get(gid));
+        return rqst_gids.filter(cache.get).map(cache.get);
     }
         
 
@@ -364,11 +364,11 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                 transaction.oncomplete = ()=> { //callback
-                    console.log("transaction success");
+                    console.log("Write transaction success");
                     resolve();
                 }
                 transaction.onerror = () => {
-                    console.error("transaction error");
+                    console.error("Write transaction error");
                     reject();
                 }
                 let objectStore = transaction.objectStore(dbTable);
@@ -385,11 +385,11 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
                     transaction.oncomplete = ()=> {
-                        console.log("transaction success");
+                        console.log("Read transaction success");
                         resolve(objects);
                     }
                     transaction.onerror = () => {
-                        console.error("transaction error");
+                        console.error("Read transaction error");
                         reject();
                     }
                 let objectStore = transaction.objectStore(dbTable);
@@ -411,10 +411,10 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                     transaction.oncomplete = ()=> {
-                        console.log("transaction success");
+                        console.log("ReadAll transaction success");
                     }
                     transaction.onerror = () => {
-                        console.error("transaction error");
+                        console.error("ReadAll transaction error");
                     }
                 let objectStore = transaction.objectStore(dbTable);
                 objectStore.openCursor().onsuccess = function(event) {
@@ -445,7 +445,7 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
                 objectStore.clear().onsuccess = function() {
-                    console.log("transaction success");
+                    console.log("Clear transaction success");
                     resolve();
                 }
             });

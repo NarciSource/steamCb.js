@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         steamCb ITCM Helper
 // @namespace    steamCb
-// @version      0.1.6
+// @version      0.1.7
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -22,7 +22,7 @@
 // @license	     MIT
 // ==/UserScript==
 
-
+this.$ = window.jQuery.noConflict(true);
 
 'use strict';
 
@@ -44,7 +44,7 @@ if( $(location).attr('href').match(/itcm.co.kr/)) {
                         $("body").after(steamCb.el);
                     }
 
-                    steamCb.popUp({width:610, height:750});
+                    steamCb.popUp({width:680, height:750});
                 });
 
     $("div.column_login").after((new SteamCb({outline: "side", style: "itcm"})).el);
@@ -63,7 +63,7 @@ if( $(location).attr('href').match(/itcm.co.kr/)) {
                     $("body").after(steamCb.el);
                 }
 
-                steamCb.popUp({width:610, height:750});
+                steamCb.popUp({width:680, height:750});
                 steamCb.addGames(gids);
             })
             .children().css({"background-color":"#333",
