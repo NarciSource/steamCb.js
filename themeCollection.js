@@ -45,7 +45,7 @@ var themeCollection = function(arg) {
                         </div>`)
         },
         table_outline = {
-            table : $(`<table class="cb-table">
+            table : $(`<table class="cb-table tablesorter">
                         <thead><tr>
                             <th name="game">Game</th>
                             <th name="ratings">Ratings</th>
@@ -57,7 +57,7 @@ var themeCollection = function(arg) {
                         </tr></thead>
                         <tbody/>
                     </table>`),
-            table_short : $(`<table class="cb-table">
+            table_short : $(`<table class="cb-table tablesorter">
                                 <thead><tr>
                                     <th name="game">Game</th>
                                     <th name="cards">C</th>
@@ -81,8 +81,7 @@ var themeCollection = function(arg) {
                                 <td name="lowest">?</td></tr>`),
         },
         default_style = {
-            header : $(`<style type="text/css">
-                        #steamcb {
+            header : `#steamcb {
                             padding : 10;
                             font-family : Arial, sans-serif;
                             font-size : 13px;
@@ -132,22 +131,27 @@ var themeCollection = function(arg) {
                         #cb-aside {
                             position : relative;
                             float : right;
-                            width : 80px;
+                            width : 90px;
                             height : calc(100% - 200px);
                             padding : 10px;
                             overflow-x : hidden;
                             overflow-y : auto;
+                        }
+                        #cb-aside .cb-aside-copyToClip {
+                            width : 80px;
+                            margin : 10px;
                         }
                         #cb-aside .cb-aside-reset {
                             position : absolute;
                             bottom : 0px;
                             margin : 10px;
                             padding: 7px 12px;
+                            width : 80px;
                         }
                         #cb-trashbox {
                             min-width : 80px;
                             max-width : 80px;
-                            margin : 30px 0px;
+                            margin : 30px 10px;
                             border : .5px solid #CCC;
                             border-spacing : 0px;
                         }
@@ -174,8 +178,28 @@ var themeCollection = function(arg) {
                         #cb-message input[type='checkbox'] {
                             float : right;
                         }
-                        .ui-autocomplete { z-index:120 !important;}  
-                        </style>`) },
+                        .ui-autocomplete { z-index:120 !important;}
+                        .tablesorter-default .header,
+                        .tablesorter-default .tablesorter-header {
+                            background-image: url(data:image/gif;base64,R0lGODlhFQAJAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==);
+                            background-position: center right;
+                            background-repeat: no-repeat;
+                            cursor: pointer;
+                            white-space: normal;
+                            padding: 4px 20px 4px 4px;
+                        }
+                        .tablesorter-default thead .headerSortUp,
+                        .tablesorter-default thead .tablesorter-headerSortUp,
+                        .tablesorter-default thead .tablesorter-headerAsc {
+                            background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7);
+                            border-bottom: #000 2px solid;
+                        }
+                        .tablesorter-default thead .headerSortDown,
+                        .tablesorter-default thead .tablesorter-headerSortDown,
+                        .tablesorter-default thead .tablesorter-headerDesc {
+                            background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7);
+                            border-bottom: #000 2px solid;
+                        }` },
         itcm_style = {
             table :`border-collapse : collapse;
                     color : rgb(70,86,112);
@@ -284,7 +308,9 @@ var themeCollection = function(arg) {
     }
 
     /* style */
-    Object.assign(result.style, default_style);
+    result.style.header = $("<style>")
+                            .attr({type: "text/css"})
+                            .text(default_style.header);
     switch(arg.style) {
         case "eevee":
             Object.assign(result.style, eevee_style);
