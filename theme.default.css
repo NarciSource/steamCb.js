@@ -1,0 +1,119 @@
+#steamcb {
+    padding : 10;
+    font-family : Arial, sans-serif;
+    font-size : 13px;
+}
+#steamcb button {
+    cursor : pointer;
+    background-color : transparent;
+    border : 1px solid #CCC;
+}
+#steamcb button:hover {
+    color: rgba(255, 255, 255, 0.85); 
+    background-color : rgba(0, 102, 204, 0.5);
+}
+#cb-header {
+    float : top;
+    height : 20px;
+    padding : 10px;
+    border-top : 1px solid #CCC;
+    border-bottom : 1px solid #CCC;
+}
+#cb-header input[type='search'] {
+    padding : 0px 5px;
+    width : 180px;
+} 
+#cb-header button.cb-header-addTable {
+    float : right;
+}
+#cb-header button.cb-delete-button {
+    float : right;
+}
+#cb-header select {
+    width : 19px;
+    height : 19px;
+    float : right;
+}
+#cb-article[type='popup'] {
+    float : left;
+    padding : 10px;
+    width : calc(100% - 130px);
+    height : calc(100% - 200px);
+    overflow : auto;
+}
+#cb-article[type='side'] {
+    float : none;
+    overflow : auto;
+}
+#cb-aside {
+    position : relative;
+    float : right;
+    width : 90px;
+    height : calc(100% - 200px);
+    padding : 10px;
+    overflow-x : hidden;
+    overflow-y : auto;
+}
+#cb-aside .cb-aside-copyToClip {
+    width : 80px;
+    margin : 10px;
+}
+#cb-aside .cb-aside-reset {
+    position : absolute;
+    bottom : 0px;
+    margin : 10px;
+    padding: 7px 12px;
+    width : 80px;
+}
+#cb-trashbox {
+    min-width : 80px;
+    max-width : 80px;
+    margin : 30px 10px;
+    border : .5px solid #CCC;
+    border-spacing : 0px;
+}
+#cb-trashbox caption {
+    text-align : left;
+    padding-left : 20px;
+}
+#cb-trashbox tr.cb-sortable-disabled {
+    cursor : pointer;
+    opacity: 0;
+}
+#cb-trashbox th:not(:first-child),
+#cb-trashbox td:not(:first-child) {
+    display:none;
+}
+#cb-message {
+    clear : both;
+    height : 100px;
+    padding : 10px;
+    border : .5px solid #CCC;
+    overflow : auto;
+    word-break : break-all;
+}
+#cb-message input[type='checkbox'] {
+    float : right;
+}
+.ui-autocomplete { z-index:120 !important;}
+.tablesorter-default .header,
+.tablesorter-default .tablesorter-header {
+    background-image: url(data:image/gif;base64,R0lGODlhFQAJAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAkAAAIXjI+AywnaYnhUMoqt3gZXPmVg94yJVQAAOw==);
+    background-position: center right;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    white-space: normal;
+    padding: 4px 20px 4px 4px;
+}
+.tablesorter-default thead .headerSortUp,
+.tablesorter-default thead .tablesorter-headerSortUp,
+.tablesorter-default thead .tablesorter-headerAsc {
+    background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAQAAAINjI8Bya2wnINUMopZAQA7);
+    border-bottom: #000 2px solid;
+}
+.tablesorter-default thead .headerSortDown,
+.tablesorter-default thead .tablesorter-headerSortDown,
+.tablesorter-default thead .tablesorter-headerDesc {
+    background-image: url(data:image/gif;base64,R0lGODlhFQAEAIAAACMtMP///yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7);
+    border-bottom: #000 2px solid;
+}

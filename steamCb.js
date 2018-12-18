@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.3.2 - 2018-12-16
+ * steamCb - v0.3.3 - 2018-12-18
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -26,8 +26,6 @@ SteamCb.prototype = function() {
             this.$aside = this.$document.find("#cb-aside");
             this.$message = this.$document.find("#cb-message");
             this.$trashbox = this.$document.find("#cb-trashbox");
-
-            $("head").append(this.theme.style.header);
         },
         _setEvent = function() {
             var that = this; //To keep the scope within the callback
@@ -93,7 +91,7 @@ SteamCb.prototype = function() {
             /* Select a theme */
             this.$head.find("select")
                     .on("click", function() {
-                        that.theme = themeCollection({style: this.value});
+                        that.theme = cbLayout({outline: that.arg.outline, style: this.value});
                         localStorage.setItem("theme", this.value); });
 
             /* Erase */
@@ -218,7 +216,6 @@ SteamCb.prototype = function() {
                         }
                     }
                 }
-                $(".tablesorter").tablesorter();
             }
             spinner.stop();
             
@@ -267,7 +264,22 @@ SteamCb.prototype = function() {
             const $table = this.theme.outline.table.clone(); //new
             
             $table  .attr("style", this.theme.style.table)
-                    .tablesorter()
+                    .tablesorter({
+                        textExtraction : function(node) {
+                            if(node.innerHTML.indexOf("%") != -1) {
+                                return node.innerHTML.replace("%","");
+                            } else {
+                                return node.innerHTML;
+                            }
+                        },
+                        textSorter : {
+                            1 : function(a, b) {
+                                const refa = Number(a.match(/\d+/g).join("")),
+                                      refb = Number(b.match(/\d+/g).join(""));
+                                return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
+                            }
+                        }
+                    })
                     .appendTo(this.$article);
 
             $table.find("thead")
@@ -296,61 +308,82 @@ SteamCb.prototype = function() {
                 glist.forEach(ginfo => {
                     let $record = this.theme.outline.record.clone(); //new
                     
-                    $record.find("td").attr("style", this.theme.style.td)
-                            .first().attr("style", this.theme.style.td+this.theme.style.tdf)
-                            .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl);
-                    
                     /* game field */
                     $record.find(`td[name="game"]`).html( 
-                        $("<a/>").attr("href", ginfo.url_store).text(ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")));
+                        $("<a/>", {
+                            href: ginfo.url_store,
+                            html: $("<span/>", { 
+                                text: ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")  })
+                        }) );
 
                     /* ratings field */
                     $record.find(`td[name="ratings"]`).html((val => {
                         switch(val) {
-                            case "?" : return "?";
-                            default : return $("<span/>").text(ginfo.reviews_text +"("+ginfo.reviews_perc+"%)");
-                        }})(ginfo.reviews_text));
+                            case "?" : return $("<span/>", { text: "?"});
+                            default : return $("<span/>", { 
+                                                    text: ginfo.reviews_text+" ("+String(ginfo.reviews_perc)+"%)" });
+                        }})(ginfo.reviews_text) );
                     
                     /* cards field */
                     $record.find(`td[name="cards"]`).html((val => {
                         switch(val) {
-                            case "?" : return "?";
-                            case false : return "-";
-                            case true : return $("<a/>").attr("href", ginfo.url_cards).html("❤");
-                        }})(ginfo.trading_cards));
+                            case "?" : return $("<span/>", { text: "?"});
+                            case false : return $("<span/>", { text: "-"});
+                            case true : return $("<a/>", {
+                                                    href: ginfo.url_cards,
+                                                    html: $("<span/>", { text: "❤"}) });
+                        }})(ginfo.trading_cards) );
 
                     /* achievements field */
                     $record.find(`td[name="archv"]`).html((val => {
                         switch(val) {
-                            case "?" : return "?";
-                            case false : return "-";
-                            case true : return $("<a/>").attr("href", ginfo.url_archv).text("▨");
+                            case "?" : return $("<span/>", { text: "?"});
+                            case false : return $("<span/>", { text: "-"});
+                            case true : return $("<a/>", {
+                                                    href: ginfo.url_archv,
+                                                    html: $("<span/>", { text: "▨"}) });
                         }})(ginfo.achievements));
                     
                     /* bundles field */
                     $record.find(`td[name="bdl"]`).html(
-                        $("<a/>").attr("href", ginfo.url_bundles).text(ginfo.bundles));
+                        $("<a/>", {
+                            href: ginfo.url_bundles,
+                            html: $("<span/>",{ text: ginfo.bundles})
+                        }));
 
                     /* lowest field */
                     $record.find(`td[name="lowest"]`).html((val => {
                         switch(val) {
-                            case "?" : return "?";
-                            default : return $("<a/>").attr("href", ginfo.url_history)
-                                                .text("$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                            case "?" : return $("<span/>", { text: "?"});
+                            default : return $("<a/>", {
+                                                href: ginfo.url_history,
+                                                html: $("<span/>", {
+                                                        css: { "white-space" : "nowrap"},
+                                                        text: "$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') }) });
                         }})(ginfo.lowest_price));                            
                     
                     /* retail field */
                     $record.find(`td[name="retail"]`).html((val => {
                         switch(val) {
-                            case "?" : return "?";
-                            default : return  $("<a/>").attr("href", ginfo.url_price_info)
-                                                .text("$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                            case "?" : return $("<span/>", { text: "?"});
+                            default : return  $("<a/>", {
+                                                href: ginfo.url_price_info,
+                                                html: $("<span/>", {
+                                                        css: { "white-space" : "nowrap"},
+                                                        text: "$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') }) });
                         }})(ginfo.retail_price));
-                        
+                    
 
+                    /* record style */
+                    $record.find("td").attr("style", this.theme.style.td)
+                           .first().attr("style", this.theme.style.td+this.theme.style.tdf)
+                           .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl)
+                           .parent().find("a > span").attr("style", this.theme.style.a);
+
+                    /* Add records to the last table. */
                     const $table = this.$article.find("table").last();
                     $record.attr("name","gid-"+ginfo.gid)
-                            .appendTo($table.children("tbody"));
+                           .appendTo($table.children("tbody"));
 
                     /* update tablesorter */
                     $table.trigger("updateAll");
@@ -390,7 +423,8 @@ SteamCb.prototype = function() {
          * @param  {string} arg.outline
          * @param  {string} arg.style */
         init : function(arg) {
-            this.theme = themeCollection(arg); //new
+            this.arg = arg;
+            this.theme = cbLayout(arg); //new
 
             _setLayout.call(this);
             _preheat.call(this);
