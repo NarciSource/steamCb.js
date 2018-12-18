@@ -22,10 +22,12 @@
 // @license	     MIT
 // ==/UserScript==
 
-'use strict';
 
 // Greasemonkey is a sandbox, but not tempermonkey, jquery crash prevention.
 this.$ = window.jQuery.noConflict(true);
+
+'use strict';
+
 
 // Apply effects to charts in itcm.
 $(".tablesorter").tablesorter({
