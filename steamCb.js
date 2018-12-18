@@ -266,11 +266,8 @@ SteamCb.prototype = function() {
             $table  .attr("style", this.theme.style.table)
                     .tablesorter({
                         textExtraction : function(node) {
-                            if(node.innerHTML.indexOf("%") != -1) {
-                                return node.innerHTML.replace("%","");
-                            } else {
-                                return node.innerHTML;
-                            }
+                            if($(node).find("span").text() === "?") return -1;
+                            return $(node).find("span").text().replace("%","");
                         },
                         textSorter : {
                             1 : function(a, b) {

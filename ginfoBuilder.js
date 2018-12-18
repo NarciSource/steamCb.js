@@ -299,10 +299,12 @@ GinfoBuilder = (function() {
         /** @method      getProduct
          *  @return      {ginfolist} cache */
         getProduct : function() {
-            return cache; },
+            return cache;
+        },
 
         clear : function() {
-            cache.clear(); }
+            cache.clear();
+        }
     };
 
 })();
@@ -385,7 +387,7 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
                     transaction.oncomplete = ()=> {
-                        console.log("Read transaction success");
+                        //console.log("Read transaction success");
                         resolve(objects);
                     }
                     transaction.onerror = () => {
@@ -411,7 +413,7 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                     transaction.oncomplete = ()=> {
-                        console.log("ReadAll transaction success");
+                        //console.log("ReadAll transaction success");
                     }
                     transaction.onerror = () => {
                         console.error("ReadAll transaction error");
@@ -445,7 +447,7 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
                 objectStore.clear().onsuccess = function() {
-                    console.log("Clear transaction success");
+                    //console.log("Clear transaction success");
                     resolve();
                 }
             });

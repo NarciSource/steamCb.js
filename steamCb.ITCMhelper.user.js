@@ -32,17 +32,14 @@ this.$ = window.jQuery.noConflict(true);
 // Apply effects to charts in itcm.
 $(".tablesorter").tablesorter({
     textExtraction : function(node) {
-        if(node.innerHTML.indexOf("%") != -1) {
-            return node.innerHTML.replace("%","");
-        } else {
-            return node.innerHTML;
-        }
+        if($(node).find("span").text() === "?") return -1;
+        return $(node).find("span").text().replace("%","");
     },
     textSorter : {
         1 : function(a, b) {
-                const refa = Number(a.match(/\d+/g).join("")),
-                    refb = Number(b.match(/\d+/g).join(""));
-                return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
+            const refa = Number(a.match(/\d+/g).join("")),
+                  refb = Number(b.match(/\d+/g).join(""));
+            return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
         }
     }
 });
