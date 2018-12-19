@@ -52,6 +52,9 @@
     border : solid #d2d6e0;
     font-style: italic;
 }
+#cb-header input.cb-searchBar:focus {
+    border : solid #3589ee;
+}
 #cb-header i.cb-searchIcon {
     position: absolute;
     margin: 4px 0px 0px 7px;
