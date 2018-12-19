@@ -14,20 +14,26 @@
 }
 #cb-header {
     float : top;
-    height : 20px;
-    padding : 10px;
+    padding : 7px;
     border-top : 1px solid #CCC;
     border-bottom : 1px solid #CCC;
 }
 #cb-header input[type='search'] {
-    padding : 0px 5px;
-    width : 180px;
+    padding : 0px 15px;
+    width : 80%;
+    height : 25px;
+    border-radius : 20px;
+    border : solid #d2d6e0;
+    font-style: italic;
 } 
 #cb-header button.cb-header-addTable {
     float : right;
 }
-#cb-header button.cb-delete-button {
+#cb-header span.cb-hide,
+#cb-header span.cb-delete {
     float : right;
+    margin : 0px 2px;
+    cursor : pointer;
 }
 #cb-header select {
     width : 19px;
@@ -102,7 +108,6 @@
     background-position: center right;
     background-repeat: no-repeat;
     cursor: pointer;
-    white-space: normal;
     padding: 4px 20px 4px 4px;
 }
 .tablesorter-default thead .headerSortUp,
