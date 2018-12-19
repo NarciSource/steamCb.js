@@ -33,6 +33,8 @@
     width : 80px;
     height : 19px;
     border : 1px solid #CCC;
+    color : #254396;
+    text-align: center;
 }
 
 
@@ -90,6 +92,10 @@
 }
 #cb-trashbox:hover {
     background: #3589ee;
+}
+#cb-trashbox caption {
+    color: #AAA;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
 }
 #cb-trashbox tr.cb-sortable-disabled {
     opacity: 0;

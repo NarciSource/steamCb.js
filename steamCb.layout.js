@@ -14,7 +14,7 @@ var cbLayout = function(arg) {
             head : $(`<div id="cb-header"/>`),
             search : $(`<span>
                             <i class="cb-searchIcon fa fa-search"/>
-                            <input type="search" class="cb-searchBar" placeholder="게임명 or Appid"/>
+                            <input type="search" class="cb-searchBar" placeholder="Game name or Appid"/>
                         </span>`),
             
             toolbox : $(`<div class="toolbox"/>`),
@@ -35,7 +35,7 @@ var cbLayout = function(arg) {
                         </select>`),
 
             trashbox : $(`<table id="cb-trashbox">
-                            <caption>휴지통</caption>
+                            <caption>Trashbox</caption>
                             <tbody class="cb-connectedSortable">
                                 <tr class="cb-sortable-disabled"><td>-</td></tr>
                                 <tr class="cb-sortable-disabled"><td>-</td></tr>
