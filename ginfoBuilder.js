@@ -175,13 +175,10 @@ GinfoBuilder = (function() {
      *  @param       {gids} rqst_gids   Gids requested by the user.
      *  @return      {Promise<glist>} */
     async function gidSelector(rqst_gids) {
-        console.log("0");
         const need_gids = rqst_gids.filter(gid => !cache.get(gid));
-        console.log("1");
         const glist = await idxDB.read(need_gids);
-console.log("2");
-        const recycle = rqst_gids.filter(gid=>cache.get(gid));console.log("3");
-        const load = glist.map(gdata=>gdata.gid);console.log("4");
+        const recycle = rqst_gids.filter(gid=>cache.get(gid));
+        const load = glist.map(gdata=>gdata.gid);
         const error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
                                 .filter(gid=> load.indexOf(gid)===-1);
         
