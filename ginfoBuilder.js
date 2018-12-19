@@ -101,11 +101,11 @@ GinfoBuilder = (function() {
     /** @type {glistEX} */
     var cache = {
         get: function(gid) {
-            return JSON.parse(sessionStorage.getItem(gid));
+            return JSON.parse(sessionStorage[gid]);
         },
         set: function(glist) {
             glist.forEach(gdata => 
-                sessionStorage.setItem(gdata.gid, JSON.stringify(gdata)));
+                sessionStorage[gdata.gid] = JSON.stringify(gdata));
             return this;
         }};
 
@@ -178,10 +178,15 @@ GinfoBuilder = (function() {
         const need_gids = rqst_gids.filter(gid => !cache.get(gid));
         
         const glist = await idxDB.read(need_gids);
+
+        const recycle = rqst_gids.filter(gid=>cache.get(gid));
+        const load = glist.map(gdata=>gdata.gid);
+        const error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
+                                .filter(gid=> load.indexOf(gid)===-1);
         
-        console.log("request gids: "+rqst_gids+" ("+
-                    "recycle: "+rqst_gids.filter(gid=>cache.get(gid))+" "+
-                    "load: "+glist.map(gdata=>gdata.gid)+" else error)");
+        console.log("Load: "+load+" / "+
+                    "recycle: "+recycle+" / "+
+                    "error: "+error);
                         
         return glist;
     };
@@ -416,7 +421,7 @@ var idxDB = (function() {
                         //console.log("ReadAll transaction success");
                     }
                     transaction.onerror = () => {
-                        console.error("ReadAll transaction error");
+                        //console.error("ReadAll transaction error");
                     }
                 let objectStore = transaction.objectStore(dbTable);
                 objectStore.openCursor().onsuccess = function(event) {

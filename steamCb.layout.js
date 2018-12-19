@@ -9,37 +9,41 @@
  */
 var cbLayout = function(arg) {
     const window_outline = {
-            base : $(`<div id="steamcb" title="Steam Chart builder">`),
+            base : $(`<div id="steamcb" title="SteamCb">`),
 
-            head : $(`<div id="cb-header">
-                    </div>`),
-            search : $(`<label>검색  </label>
-                        <input type="search" class="cb-header-searchBar" placeholder="게임명 or Appid"/>`),
-            select : $(`<select>
-                            <option>eevee</option>
-                            <option>sg</option>
-                            <option>xmas</option>
-                        </select>`),
-            addTable : $(`<button class="cb-header-addTable">테이블 추가</button>`),
-            delete : $(`<button class="cb-delete-button">삭제</button>`),
+            head : $(`<div id="cb-header"/>`),
+            search : $(`<span>
+                            <i class="cb-searchIcon fa fa-search"/>
+                            <input type="search" class="cb-searchBar" placeholder="게임명 or Appid"/>
+                        </span>`),
+            
+            toolbox : $(`<div class="toolbox"/>`),
+            btnAddTable : $(`<i class="cb-btnAddTable fa fa-table"/>`),
+            btnDelete : $(`<i class="cb-btnDelete fa fa-trash-o"/>`),
+            btnShow : $(`<i class="cb-btnShow fa fa-plus-circle"/>`),
+            btnCopyToClip : $(`<i class="cb-btnCopyToClip fa fa-clipboard"/>`),
+            btnReset : $(`<i class="cb-btnReset fa fa-exclamation-triangle"/>`),
 
             article_popup : $(`<div id="cb-article" type="popup" class="cb-connectedSortable"/>`),
             article_side : $(`<div id="cb-article" type="side" class="cb-connectedSortable"/>`),
 
-            aside : $(`<div id="cb-aside">
-                            <button class="cb-aside-copyToClip">클립보드 복사</button>
-                            <table id="cb-trashbox">
-                                <caption>휴지통</caption>
-                                <tbody class="cb-connectedSortable">
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                    <tr class="cb-sortable-disabled"><td>-</td></tr>
-                                </tbody>
-                            </table>
-                            <button class="cb-aside-reset">초기화</button>
-                        </div>`),
+            aside : $(`<div id="cb-aside"/>`),
+            select : $(`<select class="selStyle">
+                            <option>eevee</option>
+                            <option>sg</option>
+                            <option>xmas</option>
+                        </select>`),
+
+            trashbox : $(`<table id="cb-trashbox">
+                            <caption>휴지통</caption>
+                            <tbody class="cb-connectedSortable">
+                                <tr class="cb-sortable-disabled"><td>-</td></tr>
+                                <tr class="cb-sortable-disabled"><td>-</td></tr>
+                                <tr class="cb-sortable-disabled"><td>-</td></tr>
+                                <tr class="cb-sortable-disabled"><td>-</td></tr>
+                                <tr class="cb-sortable-disabled"><td>-</td></tr>
+                            </tbody>
+                        </table>`),
                         
             message : $(`<div id="cb-message">
                             <input type="checkbox" checked>
@@ -106,7 +110,7 @@ var cbLayout = function(arg) {
                     padding : 3px 10px 3px 10px;
                     text-align:center;`,
             tdf : ` text-align:left;`,
-            tdl : ``},
+            tdl : ` white-space : nowrap;`},
         sg_style = {
             table :`border-collapse : collapse;
                     color : rgb(70,86,112);
@@ -132,7 +136,7 @@ var cbLayout = function(arg) {
                     padding : 3px 10px 3px 10px;
                     text-align:center;`,
             tdf : ` text-align:left;`,
-            tdl : ``},
+            tdl : ` white-space : nowrap;`},
         eevee_style = {
             table : `border-collapse : collapse;
                     color : #2c2f32;
@@ -160,13 +164,13 @@ var cbLayout = function(arg) {
                     text-align : center;`,
             tdf : ` border-left : 0px;
                     text-align : left;`,
-            tdl : ` border-right : 0px;`},
+            tdl : ` border-right : 0px;
+                    white-space : nowrap;`},
         xmas_style = {
             table : `border-collapse : collapse;
                     color : #FFF;
                     font-family : Arial, sans-serif;
-                    margin : 0px 0px 15px;
-                    text-shadow : ;`,
+                    margin : 0px 0px 15px;`,
             thead : `background-color: #15854b;
                     border-top : 1px solid #31355b;
                     border-bottom : 2px solid #31355b;
@@ -188,7 +192,8 @@ var cbLayout = function(arg) {
                     text-align : center;`,
             tdf : ` border-left : 0px;
                     text-align : left;`,
-            tdl : ` border-right : 0px;`,
+            tdl : ` border-right : 0px;
+                    white-space : nowrap;`,
             a : `color : #fff !important;`};
 
     let result = {  outline : {/*window, table, record*/}, 
@@ -196,9 +201,14 @@ var cbLayout = function(arg) {
     /* outline */
     switch(arg.outline) {
         case "popup":
+        
+            var toolbox = window_outline.toolbox.append([window_outline.btnAddTable,
+                                                         window_outline.btnCopyToClip]);
             window_outline.head.append([window_outline.search,
-                                        window_outline.select,
-                                        window_outline.addTable]);
+                                        toolbox]);
+
+            window_outline.aside.append([
+                window_outline.select, window_outline.trashbox, window_outline.btnReset]);
             result.outline.window = window_outline.base.append([window_outline.head,
                                                                 window_outline.article_popup,
                                                                 window_outline.aside,
@@ -208,8 +218,11 @@ var cbLayout = function(arg) {
             break;
         case "side":
         default:
+            var toolbox = window_outline.toolbox.append([
+                                                     window_outline.btnDelete, window_outline.btnShow]);
+
             window_outline.head.append([window_outline.search,
-                                        window_outline.delete]);
+                                        toolbox]);
             result.outline.window = window_outline.base.append([window_outline.head,
                                                                 window_outline.article_side]);
             result.outline.table = table_outline.table_short;

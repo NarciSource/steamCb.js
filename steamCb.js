@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.3.3 - 2018-12-18
+ * steamCb - v0.3.4 - 2018-12-20
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -31,8 +31,23 @@ SteamCb.prototype = function() {
             var that = this; //To keep the scope within the callback
 
             /* Search bar */
-            (async function ($search_bar, $article) {
-                let gids = [];
+            (async function ($search_bar, $search_icon, $article) {
+                let gids = [],
+                    process = function() {
+                        if(gids.length === 0) {
+                            /* search by gids */
+                            gids = $search_bar.val().split(",").map(gid=>gid.trim()).filter(gid=> (/^[0-9]*$/).test(gid));
+                        }
+
+                        if(!$article.children("table").length) {//no table
+                            _addTable.call(that);
+                        }
+                        _addGames.call(that, gids.slice()); 
+                        gids = [/*empty*/];
+                        $search_bar.val("");
+                    };
+                $search_icon
+                    .on("click", process);
 
                 $search_bar
                     .attr("disabled","disabled")
@@ -62,59 +77,67 @@ SteamCb.prototype = function() {
                     })
                     .on("keydown", function (key) {
                         if(key.keyCode == 13) { //enter-key
-                            if(gids.length === 0) {
-                                /* search by gids */
-                                gids = $(this).val().split(",").map(gid=>gid.trim()).filter(gid=> (/^[0-9]*$/).test(gid));
-                            }
-
-                            if(!$article.children("table").length) {//no table
-                                _addTable.call(that);
-                            }
-                            _addGames.call(that, gids.slice()); 
-                            gids = [/*empty*/];
-                            $(this).val(""); }
+                            process();
+                        }
                     });
-            })(this.$head.find("input.cb-header-searchBar"), this.$article);
+            })(this.$head.find("input.cb-searchBar"), this.$head.find("i.cb-searchIcon"), this.$article);
             
 
-  
-            /* Connect the tables and apply the sortable */
-            this.$document.find(".cb-connectedSortable")
-                    .sortable({ cancel: ".cb-sortable-disabled",
-                                connectWith: ".cb-connectedSortable" });
             
             /* Add a table */
-            this.$head.find("button.cb-header-addTable")
+            this.$document.find("i.cb-btnAddTable")
                     .on("click", function() { 
                         _addTable.call(that); });
 
             /* Select a theme */
-            this.$head.find("select")
+            this.$document.find("select.selStyle")
                     .on("click", function() {
                         that.theme = cbLayout({outline: that.arg.outline, style: this.value});
-                        localStorage.setItem("theme", this.value); });
+                        localStorage["theme"] = this.value; 
+                        console.log("Change the theme")});
+
+            /* Hides/show the article */
+            (function ($btnShow, $article) {
+                if($btnShow.length === 0) return;
+                if( localStorage["side-show"] === "hide" ) {
+                    $btnShow.addClass("fa-minus-circle");
+                    $btnShow.removeClass("fa-plus-circle");
+                    $article.css("display", "none");
+                } else {
+                    $btnShow.addClass("fa-plus-circle");
+                    $btnShow.removeClass("fa-minus-circle");
+                    $article.css("display", "block");
+                }
+
+                $btnShow.on("click", function() {
+                            $(this).toggleClass("fa-plus-circle");
+                            $(this).toggleClass("fa-minus-circle");
+                            if($(this).hasClass("fa-plus-circle")) {
+                                $article.css("display", "block");
+                                localStorage["side-show"] = "show";
+                            } else {
+                                $article.css("display", "none");
+                                localStorage["side-show"] = "hide";
+                            }
+                        })
+            })(this.$document.find("i.cb-btnShow"), this.$article);
+
 
             /* Erase */
-            this.$head.find("button.cb-delete-button")
+            this.$document.find("i.cb-btnDelete")
                     .on("click", function() { 
                         that.$article.children().not("tr.cb-sortable-disabled").remove();
-                        sessionStorage.setItem("command", []); });    
+                        sessionStorage["command"] = []; });    
             
             /* Erase the trashbox */
-            this.$trashbox.find("tbody.cb-connectedSortable")
-                    .on("mouseenter", function() { 
-                        $(this) .css("cssText", "background: rgba(0, 102, 204, 0.5);")
-                                .prev().text("비우기"); })
-                    .on("mouseleave", function() {     
-                        $(this) .css("cssText", "background: transparent")
-                                .prev().text("휴지통"); })
             this.$trashbox.find("tr.cb-sortable-disabled")
                     .on("click", function() { 
                         $(this) .siblings().not("tr.cb-sortable-disabled")
-                                .remove();});
+                                .remove();
+                        console.log("Erase"); });
 
             /* Copy to clipboard */
-            this.$aside.find("button.cb-aside-copyToClip")
+            this.$document.find("i.cb-btnCopyToClip")
                     .on("click", function () {
                         ((el) => {
                             var body = document.body, range, sel;
@@ -135,20 +158,28 @@ SteamCb.prototype = function() {
                                 range.select();
                             }
                         })( that.$article[0]);
-                        console.log("Copy");
+                        console.log("Copy to clipboard");
                         document.execCommand("Copy");});
 
             /* Reset DB and stroage */
-            this.$aside.find(".cb-aside-reset")
+            this.$document.find("i.cb-btnReset")
                     .on("click", function () {
                         idxDB.clear();
                         sessionStorage.clear();
                         localStorage.clear();
                         that.$head.find("input.cb-header-searchBar")
                             .attr("disabled","disabled");
-                    });
+                        console.error("Reset!") });
 
+
+
+  
+            /* Connect the tables and apply the sortable */
+            this.$document.find(".cb-connectedSortable")
+                    .sortable({ cancel: ".cb-sortable-disabled",
+                                connectWith: ".cb-connectedSortable" });
             
+
             /* Intercept Console */
             (function ($message) {
                 var console_capture = function() {
@@ -172,21 +203,28 @@ SteamCb.prototype = function() {
                             } else {
                                 console_release.call(that);
                             } });
+                $message.on("DOMNodeInserted", function() {
+                            $(this).scrollTop($(this).prop("scrollHeight"));
+                        });
             })(this.$message);
 
 
+
             /* Record $article's contents in sessionStorage */
-            var contents_recording = function() {
-                    let command = [];
-                    that.$article.find("table.cb-table").each((_, table) => {
-                        command.push("table");
-                        $(table).find("tbody tr").each((_, tr) =>
-                            command.push($(tr).attr("name")) );
-                    });
-                    sessionStorage.setItem("command", JSON.stringify(command));
-                };
-            this.$article.on("DOMNodeInserted", contents_recording);
-            this.$trashbox.on("DOMNodeInserted", contents_recording);
+            (function ($article, $trashbox) {
+                var contents_recording = function() {
+                        let command = [];
+                        $article.find("table.cb-table").each((_, table) => {
+                            command.push("table");
+                            $(table).find("tbody tr").each((_, tr) =>
+                                command.push($(tr).attr("name")) );
+                        });
+                        sessionStorage["command"] = JSON.stringify(command);
+                    };
+                $article.on("DOMNodeInserted", contents_recording);
+                $trashbox.on("DOMNodeInserted", contents_recording);
+
+            })(this.$article, this.$trashbox);
         },
         _preheat = async function() {
             /* GinfoBuilder preheat */
@@ -196,7 +234,7 @@ SteamCb.prototype = function() {
                 await GinfoBuilder.preheat();
                 console.log("preheat");
 
-                this.$head.find("input.cb-header-searchBar")
+                this.$head.find("input.cb-searchBar")
                         .removeAttr("disabled");
             }
             spinner.stop();
@@ -204,8 +242,8 @@ SteamCb.prototype = function() {
             /* Return previous memory */
             spinner.spin();
             {
-                if(sessionStorage.getItem("command")) {
-                    const command = JSON.parse(sessionStorage.getItem("command"));
+                if(sessionStorage["command"]) {
+                    const command = JSON.parse(sessionStorage["command"]);
 
                     for( let i=0; i<command.length; i++) {
                         switch(command[i]) {
@@ -223,14 +261,14 @@ SteamCb.prototype = function() {
             spinner.spin();
             this.$head.append( $(spinner.el).css("display","inline") );
             {
-                this.searchList = localStorage.getItem("searchList");
+                this.searchList = localStorage["searchList"];
                 if(!this.searchList) {
                     const dataType = function(value) {
                         return {label: value.name, gid: value.gid};
                     };
                     
                     this.searchList = await idxDB.readAll(dataType);
-                    localStorage.setItem("searchList", JSON.stringify(this.searchList));
+                    localStorage["searchList"] = JSON.stringify(this.searchList);
 
                 } else {
                     this.searchList = JSON.parse(this.searchList);
@@ -293,7 +331,7 @@ SteamCb.prototype = function() {
                     .sortable({connectWith: ".cb-connectedSortable"})
                     .attr("style", this.theme.style.tbody);
 
-            console.log("A table has been added");
+            console.log("Table has been added");
         },
         _addGames = async function(gids) {
             let spinner = new Spinner(spinner_opts).spin();
@@ -355,7 +393,6 @@ SteamCb.prototype = function() {
                             default : return $("<a/>", {
                                                 href: ginfo.url_history,
                                                 html: $("<span/>", {
-                                                        css: { "white-space" : "nowrap"},
                                                         text: "$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') }) });
                         }})(ginfo.lowest_price));                            
                     
@@ -366,7 +403,6 @@ SteamCb.prototype = function() {
                             default : return  $("<a/>", {
                                                 href: ginfo.url_price_info,
                                                 html: $("<span/>", {
-                                                        css: { "white-space" : "nowrap"},
                                                         text: "$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,') }) });
                         }})(ginfo.retail_price));
                     
@@ -375,6 +411,7 @@ SteamCb.prototype = function() {
                     $record.find("td").attr("style", this.theme.style.td)
                            .first().attr("style", this.theme.style.td+this.theme.style.tdf)
                            .nextAll().last().attr("style", this.theme.style.td+this.theme.style.tdl)
+                           .prev().attr("style", this.theme.style.td+this.theme.style.tdl)
                            .parent().find("a > span").attr("style", this.theme.style.a);
 
                     /* Add records to the last table. */

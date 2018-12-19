@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         steamCb ITCM Helper
 // @namespace    steamCb
-// @version      0.1.9
+// @version      0.1.10
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*

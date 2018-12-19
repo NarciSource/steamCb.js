@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         steamCb ITCM Helper
 // @namespace    steamCb
-// @version      0.1.9
+// @version      0.1.10
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -44,16 +44,18 @@ $(".tablesorter").tablesorter({
     }
 });
 
-var steamCb = undefined;
-
 // Add style
-(async function() {
+var addStyle = async function(resource_url) {
     $("<link>", {
         rel : "stylesheet",
         type : "text/css",
-        href : await GM.getResourceUrl("cbstyle")
+        href : await GM.getResourceUrl(resource_url)
     }).appendTo("head");
-})();
+};
+addStyle("cbstyle");
+
+
+var steamCb = undefined;
 
 // Create a pop-up access button at the top
 $(`<li><a class="login_A">

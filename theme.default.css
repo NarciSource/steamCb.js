@@ -3,47 +3,63 @@
     font-family : Arial, sans-serif;
     font-size : 13px;
 }
-#steamcb button {
+
+
+#steamcb div.toolbox {
+    float : right;
+    padding: 3px 0px 0px 0px;
+}
+#steamcb i.fa {
+    font-size: 17px;
+    color: #a0a3ab;
+    margin : 0px 4px;
     cursor : pointer;
-    background-color : transparent;
+}
+#steamcb i.fa:hover {
+    color: #254396;
+}
+#steamcb i.cb-btnShow {
+    margin : 0px 0px 0px 15px;
+}
+#steamcb i.cb-btnReset {
+    position: absolute;
+    bottom : 0px;
+    right: 0px;
+}
+#steamcb i.cb-btnReset:hover {
+    color: #f00;
+}
+#steamcb select.selStyle {
+    width : 80px;
+    height : 19px;
     border : 1px solid #CCC;
 }
-#steamcb button:hover {
-    color: rgba(255, 255, 255, 0.85); 
-    background-color : rgba(0, 102, 204, 0.5);
-}
+
+
 #cb-header {
     float : top;
     padding : 7px;
     border-top : 1px solid #CCC;
     border-bottom : 1px solid #CCC;
 }
-#cb-header input[type='search'] {
-    padding : 0px 15px;
+#cb-header input.cb-searchBar {
+    padding : 0px 23px;
     width : 80%;
     height : 25px;
     border-radius : 20px;
     border : solid #d2d6e0;
     font-style: italic;
-} 
-#cb-header button.cb-header-addTable {
-    float : right;
 }
-#cb-header span.cb-hide,
-#cb-header span.cb-delete {
-    float : right;
-    margin : 0px 2px;
-    cursor : pointer;
+#cb-header i.cb-searchIcon {
+    position: absolute;
+    margin: 4px 0px 0px 7px;
 }
-#cb-header select {
-    width : 19px;
-    height : 19px;
-    float : right;
-}
+
+
 #cb-article[type='popup'] {
     float : left;
     padding : 10px;
-    width : calc(100% - 130px);
+    width : calc(100% - 120px);
     height : calc(100% - 200px);
     overflow : auto;
 }
@@ -51,45 +67,39 @@
     float : none;
     overflow : auto;
 }
+
+
 #cb-aside {
     position : relative;
     float : right;
-    width : 90px;
+    width : 80px;
     height : calc(100% - 200px);
     padding : 10px;
     overflow-x : hidden;
     overflow-y : auto;
 }
-#cb-aside .cb-aside-copyToClip {
-    width : 80px;
-    margin : 10px;
-}
-#cb-aside .cb-aside-reset {
-    position : absolute;
-    bottom : 0px;
-    margin : 10px;
-    padding: 7px 12px;
-    width : 80px;
-}
+
+
 #cb-trashbox {
     min-width : 80px;
     max-width : 80px;
-    margin : 30px 10px;
+    margin : 30px 0px;
     border : .5px solid #CCC;
     border-spacing : 0px;
+    cursor: pointer;
 }
-#cb-trashbox caption {
-    text-align : left;
-    padding-left : 20px;
+#cb-trashbox:hover {
+    background: #3589ee;
 }
 #cb-trashbox tr.cb-sortable-disabled {
-    cursor : pointer;
     opacity: 0;
 }
 #cb-trashbox th:not(:first-child),
 #cb-trashbox td:not(:first-child) {
     display:none;
 }
+
+
 #cb-message {
     clear : both;
     height : 100px;
@@ -100,6 +110,16 @@
 }
 #cb-message input[type='checkbox'] {
     float : right;
+}
+
+
+.ui-widget-header {
+    background: #3589ee;
+    color : #FFF;
+    line-height: 13px;
+    text-shadow : 1px 1px #CCC;
+    border-radius: 2;
+    box-shadow: 0px 1px 0px 1px #CCC;
 }
 .ui-autocomplete { z-index:120 !important;}
 .tablesorter-default .header,
