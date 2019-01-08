@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.11
+// @version      0.1.12
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -17,6 +17,7 @@
 // @resource     cb-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/cb.default.css
 // @resource     ts-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/tablesorter.css
 // @resource     table-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/table.default.css
+// @resource     exchange-api http://earthquake.kr/exchange/
 // @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.meta.js
 // @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.user.js
 // @grant        GM.getResourceUrl

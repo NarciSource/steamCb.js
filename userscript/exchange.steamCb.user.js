@@ -29,7 +29,7 @@ this.$ = window.jQuery.noConflict(true);
 
         localStorage["exchange"] = JSON.stringify({
             date : nowDate,
-            exchange : exchange[0]
+            exchange : exchange
         });
     }
 
