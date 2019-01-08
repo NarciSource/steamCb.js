@@ -22,11 +22,9 @@ this.$ = window.jQuery.noConflict(true);
     const nowDate = new Date();
     nowDate.setHours(0, 0, 0, 0);
 
-    console.log(localStorage["exchange"]);
     if( localStorage["exchange"]===undefined || 
         nowDate > new Date(JSON.parse(localStorage["exchange"]).date) ) {
 
-        console.warn("change");
         const exchange = await $.get(await GM.getResourceUrl("exchange-api"));
 
         localStorage["exchange"] = JSON.stringify({

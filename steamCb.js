@@ -184,14 +184,26 @@
 
 
             /* Reset DB and stroage */
+            var real_click=false;
             this.element.find("i.cb-btnReset")
                     .on("click", function () {
-                        idxDB.clear();
-                        sessionStorage.clear();
-                        localStorage.clear();
-                        that.head.find("input.cb-header-searchBar")
-                            .attr("disabled","disabled");
-                        console.warn("Reset!") });
+                        if(!real_click) {
+                            console.warn("! Warning !");
+                            console.warn("This action clears the db and requests a list of all games from the Steam Server.");
+                            console.warn("If you would like to update newly released game on Steam, please continue this action.");
+                            console.warn("Press the button again, if you really want to proceed.");
+                            console.warn("This process takes tens of seconds.");
+                            real_click=true;
+                        } else {
+                            idxDB.clear();
+                            sessionStorage.clear();
+                            localStorage.clear();
+                            that.head.find("input.cb-searchBar")
+                                .attr("disabled","disabled");
+                            console.warn("Reset! Please refresh on page.");
+                            real_click=false;
+                        }
+                    });
 
 
 
@@ -412,8 +424,7 @@
                         $("<a/>", {
                             href: ginfo.url_store,
                             html: $("<span/>", { 
-                                text: ginfo.name + (ginfo.is_dlc===true? " (dlc)":""),
-                                style: "text-align: center"  })
+                                text: ginfo.name + (ginfo.is_dlc===true? " (dlc)":"")})
                         }) );
 
                     /* ratings field */
@@ -459,7 +470,7 @@
                                                 href: ginfo.url_history,
                                                 html: $("<span/>", {
                                                         text: "$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'),
-                                                        style: "white-space: nowrap"}) });
+                                                        style: "white-space: nowrap;"}) });
                         }})(ginfo.lowest_price));                            
                     
                     /* retail field */
@@ -470,7 +481,7 @@
                                                 href: ginfo.url_price_info,
                                                 html: $("<span/>", {
                                                         text: "$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'),
-                                                        style: "white-space: nowrap"}) });
+                                                        style: "white-space: nowrap;"}) });
                         }})(ginfo.retail_price));
                     
                     return $record;
@@ -495,6 +506,9 @@
                 if(this.options.style[this.options.theme+" a"]!==undefined) {
                     $table.find("a > span").attr("style",   this.options.style[this.options.theme+" a"].rules);
                 }
+                $table.find(`td[name="game"]`).css("text-align","left")
+                    .siblings(`td[name="lowest"]`).css("text-align","right")
+                    .siblings(`td[name="retail"]`).css("text-align","right");
             }
             spinner.stop();
         },
