@@ -119,11 +119,11 @@ GinfoBuilder = (function() {
             var applist = await getSteamworksAppList();
             applist = applist.applist.apps.app;
 
-            console.log("Loads all steam applist.");
-            console.log("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
+            console.info("Loads all steam applist.");
+            console.info("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
                         applist.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
         } catch(err) {
-            console.error("Steam api is inaccessible. "+ 
+            console.warn("Steam api is inaccessible. "+ 
                         err.status + " " + err.statusText);
 
             return [/*empty*/];
@@ -133,9 +133,9 @@ GinfoBuilder = (function() {
         try {
             var plainlist = await getITADPlainList();
 
-            console.log("Loads itad steam game's plain list");
+            console.info("Loads itad steam game's plain list");
         } catch(err) {
-            console.error("ITAD api is inaccessible. "+ 
+            console.warn("ITAD api is inaccessible. "+ 
                         err.status + " " + err.statusText);
 
             return [/*empty*/];
@@ -165,7 +165,7 @@ GinfoBuilder = (function() {
                 return true;
             }
         } catch(_) { 
-            console.error("Error in isExist of IndexedDB."); 
+            console.warn("Error in isExist of IndexedDB."); 
         }
     };
 
@@ -182,7 +182,7 @@ GinfoBuilder = (function() {
         const error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
                                 .filter(gid=> load.indexOf(gid)===-1);
         
-        console.log("Load: "+load+" / "+
+        console.info("Load: "+load+" / "+
                     "recycle: "+recycle+" / "+
                     "error: "+error);
                         
@@ -216,7 +216,7 @@ GinfoBuilder = (function() {
                         gdata.retail_price = res_price.d.data[plain].list[0].price_new;
                     } else throw "";
                 }catch(e) {
-                    console.error("Can not read the price information.");
+                    console.warn(gdata.gid + " Can not read the price information.");
                 }
 
                 try {
@@ -230,7 +230,7 @@ GinfoBuilder = (function() {
                         gdata.is_package = res_info.d.data[plain].is_package;
                     } else throw "";
                 }catch(e) {
-                    console.error("Can not read the trading cards and achievemts informaion.");
+                    console.warn(gdata.gid + " Can not read the trading cards and achievemts informaion.");
                 }
 
                 try {
@@ -239,7 +239,7 @@ GinfoBuilder = (function() {
                         gdata.url_history = res_lowest.d.data[plain].urls.history;
                     } else throw "";
                 }catch(e) {
-                    console.error("Can not read the lowest price information.");
+                    console.warn(gdata.gid + " Can not read the lowest price information.");
                 }
 
                 try {
@@ -248,7 +248,7 @@ GinfoBuilder = (function() {
                         gdata.url_bundles = res_bundles.d.data[plain].urls.bundles;
                     } else throw "";
                 }catch(e) {
-                    console.error("Can not read the number of bundles information.");
+                    console.warn(gdata.gid + " Can not read the number of bundles information.");
                 }                               
             });
         }
@@ -342,7 +342,7 @@ var idxDB = (function() {
                 let request = window.indexedDB.open( dbName, version);
                 request.onsuccess = function(res) {
                     db = res.target.result;
-                    console.log("request success");
+                    console.info("request success");
                     resolve();
                 }
                 request.onerror = function(res) {
@@ -350,7 +350,7 @@ var idxDB = (function() {
                 }
                 request.onupgradeneeded = function(res) { // upgrade.then=>success
                     db = res.target.result;
-                    console.log("request upgrade");
+                    console.info("request upgrade");
                     
                     let objectStore = db.createObjectStore( dbTable, {keyPath: primaryKey});
                     //objectStore.createIndex(candidateKey, candidateKey, { unique: true });
@@ -369,11 +369,11 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                 transaction.oncomplete = ()=> { //callback
-                    console.log("Write transaction success");
+                    console.info("Write transaction success");
                     resolve();
                 }
                 transaction.onerror = () => {
-                    console.error("Write transaction error");
+                    console.warn("Write transaction error");
                     reject();
                 }
                 let objectStore = transaction.objectStore(dbTable);
@@ -390,11 +390,11 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readonly");
                     transaction.oncomplete = ()=> {
-                        //console.log("Read transaction success");
+                        console.log("Read transaction success");
                         resolve(objects);
                     }
                     transaction.onerror = () => {
-                        console.error("Read transaction error");
+                        console.warn("Read transaction error");
                         reject();
                     }
                 let objectStore = transaction.objectStore(dbTable);
@@ -416,10 +416,10 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let transaction = db.transaction(dbTable, "readwrite");
                     transaction.oncomplete = ()=> {
-                        //console.log("ReadAll transaction success");
+                        console.log("ReadAll transaction success");
                     }
                     transaction.onerror = () => {
-                        //console.error("ReadAll transaction error");
+                        console.error("ReadAll transaction error");
                     }
                 let objectStore = transaction.objectStore(dbTable);
                 objectStore.openCursor().onsuccess = function(event) {
@@ -450,7 +450,7 @@ var idxDB = (function() {
             return new Promise(function(resolve, reject) {
                 let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
                 objectStore.clear().onsuccess = function() {
-                    //console.log("Clear transaction success");
+                    console.log("Clear transaction success");
                     resolve();
                 }
             });

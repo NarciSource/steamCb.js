@@ -1,0 +1,130 @@
+
+.eevee table {
+    border-collapse : collapse;
+    color : #2c2f32;
+    font-family : Arial, sans-serif;
+    margin : 0px 0px 15px;
+    text-shadow : 1px 1px rgba(255,255,255,0.94);
+}
+.eevee thead {
+    background-color: #ffdb52;
+    border-top : 1px solid #d7a44f;
+    border-bottom : 2px solid #d7a44f;
+    font-size : 13px;
+    line-height : 25.15px;
+}
+.eevee th {
+    border : 1px solid #d7a44f;
+    padding : 3px 10px;
+    text-align : center;
+}
+.eevee tbody {
+    line-height : 20.15px;
+    font-weight : 400;
+}
+.eevee td {
+    background-color : #fdf0c8;
+    border : 1px solid #fdcf83;
+    padding : 3px 10px;
+    text-align : center;
+}
+
+
+.itcm table {
+    border-collapse : collapse;
+    color : rgb(70,86,112);
+    font-family : Arial, sans-serif;
+    font-size : 13px;
+    font-weight : 400;
+    line-height : 20.15px;
+    margin : 0px 0px 15px;
+    table-layout : fixed;
+    text-shadow : 1px 1px rgba(255,255,255,0.94);
+}
+.itcm thead {
+    background-color:#f6f6f6;
+    border-bottom : 1px solid rgb(70,86,112);
+    font-weight:700;
+    line-height:20.15px;
+}
+.itcm th {
+    border : 1px solid rgb(210,214,224);
+    padding : 3px 10px 3px 10px;
+    text-align:center;
+}
+.itcm tbody {
+    font-weight : 400;
+}
+.itcm td {
+    border : 1px solid rgb(210,214,224);
+    padding : 3px 10px 3px 10px;
+    text-align:center;
+}
+
+
+
+.xmas table {
+    border-collapse : collapse;
+    color : #FFF;
+    font-family : Arial, sans-serif;
+    margin : 0px 0px 15px;
+}
+.xmas thead {
+    background-color: #15854b;
+    border-top : 1px solid #31355b;
+    border-bottom : 2px solid #31355b;
+    font-size : 13px;
+    line-height : 25.15px;
+}
+.xmas th {
+    border : 1px solid #fff;
+    padding : 3px 10px;
+    text-align : center;
+}
+.xmas tbody {
+    line-height : 20.15px;
+    font-weight : 400;
+    color : #fff;
+}
+.xmas td {
+    background-color : #be3e3f;
+    border : 1px solid #fff;
+    padding : 3px 10px;
+    text-align : center;    
+}
+.xmas a {
+    color : #fff !important;
+}
+
+
+
+.sg table {
+    border-collapse : collapse;
+    color : rgb(70,86,112);
+    font-family : Arial, sans-serif;
+    font-size : 13px;
+    font-weight : 400;
+    line-height : 20.15px;
+    margin : 0px 0px 15px;
+    table-layout : fixed;
+    text-shadow : 1px 1px rgba(255,255,255,0.94);
+}
+.sg thead {
+    background-color:rgb(232,234,239);
+    border-bottom : 1px solid rgb(70,86,112);
+    font-weight:700;
+    line-height:20.15px;
+}
+.sg th {
+    border : 1px solid rgb(210,214,224);
+    padding : 3px 10px 3px 10px;
+    text-align:center;
+}
+.sg tbody {
+    font-weight:400;
+}
+.sg td {
+    border : 1px solid rgb(210,214,224);
+    padding : 3px 10px 3px 10px;
+    text-align:center;
+}
