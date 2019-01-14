@@ -1,8 +1,15 @@
 <div class="steamcb">
-    <div class="cb-header">
+    <div class="cb-header" type="popup">
         <span>
+            <select class="cb-searchCategory">
+                <option value="app">Game</option>
+                <option value="dlc">Dlc</option>
+                <option value="sub">Package</option>
+                <option value="bundle">Bundle</option>
+                <option value="all">All</option>
+            </select>
+            <input type="search" class="cb-searchBar" placeholder="Name or Appid"/>
             <i class="cb-searchIcon fa fa-search"/>
-            <input type="search" class="cb-searchBar" placeholder="Game name or Appid"/>
         </span>
             
         <div class="toolbox">
@@ -13,11 +20,14 @@
 
 
     <div class="cb-aside">
-        <select class="selStyle">
-            <option>eevee</option>
-            <option>sg</option>
-            <option>xmas</option>
-        </select>
+        <div class="cb-selStyle">
+            <p>TableStyle</p>
+            <select>
+                <option>eevee</option>
+                <option>sg</option>
+                <option>xmas</option>
+            </select>
+        </div>
 
         <table class="cb-trashbox">
             <caption>Trashbox</caption>

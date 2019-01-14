@@ -1,7 +1,7 @@
 /**
- * GinfoBuilder - v0.2.4 - 2018-12-16
+ * GinfoBuilder - v0.2.5 - 2018-01-15
  * https://github.com/NarciSource/ginfoBuilder.js
- * Copyright 2018. Narci. all rights reserved.
+ * Copyright 2018-2019. Narci. all rights reserved.
  * Licensed under the MIT license
  */
 
@@ -70,17 +70,16 @@ GinfoBuilder = (function() {
                 url: "https://store.steampowered.com/api/packagedetails/?packageids="+subid }); },
         getSteamworksAppList = () => {
             return $.ajax({ //Until now, get all appids and their names.
-                //or replace http://api.steampowered.com/ISteamApps/GetAppList/v0002/ 
-                url: "http://api.steampowered.com/ISteamApps/GetAppList/v0001/?format=json"}); },
+                url: "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"}); },
         getSteamworksPrice = (appids, opt) => { //multiple, filter, but only price, Access-Control-Allow-Origin problem
             opt = opt || {currency:"kr",language:"kr"};
             return $.ajax({
                 url: "https://store.steampowered.com/api/appdetails?appids="+appids.join()+"&cc="+opt.currency+"&l="+opt.language+"&filters=price_overview"});}
 
     var getITAD = (url) => {
-        const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af"; //mykey
-        return $.ajax({
-            url: url.replace('%key%',itad_api_key) }); },
+            const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af"; //mykey
+            return $.ajax({
+                url: url.replace('%key%',itad_api_key) }); },
         getITADPlainList = () => {
             const store = "steam";
             return getITAD("https://api.isthereanydeal.com/v01/game/plain/list/?key=%key%&shops="+store); },
@@ -94,41 +93,28 @@ GinfoBuilder = (function() {
         getITADLowest = (plains) => {
             return getITAD("https://api.isthereanydeal.com/v01/game/lowest/?key=%key%&plains="+plains); },
         getITADBundles = (plains) => {
-            return getITAD("https://api.isthereanydeal.com/v01/game/bundles/?key=%key%&plains="+plains); };
+            return getITAD("https://api.isthereanydeal.com/v01/game/bundles/?key=%key%&plains="+plains); },
+        getITADOverview = (plains) => {
+            return getITAD("https://api.isthereanydeal.com/v01/game/overview/?key=%key%&plains="+plains+"&shop=steam"); };
 
 
 
     /** @type {glistEX} */
     var cache = {
-        get: function(gid) {
-            return JSON.parse(sessionStorage.getItem(gid));
-        },
-        set: function(glist) {
-            glist.forEach(gdata => 
-                sessionStorage.setItem(gdata.gid, JSON.stringify(gdata)));
-            return this;
-        }};
+            get: function(gid) {
+                return JSON.parse(sessionStorage.getItem(gid));
+            },
+            set: function(glist) {
+                glist.forEach(gdata => 
+                    sessionStorage.setItem(gdata.gid, JSON.stringify(gdata)));
+                return this;
+            }};
 
 
-    /** @function    externalLoad (async)
-     *  @description Load basic data from steam and itad api.
+    /** @function    initLoad (async)
+     *  @description Load init data.
      *  @return      {Promise<glist>} Regular name and plain based on gid. */
-    async function externalLoad() {
-        /* Load from Steam api */
-        try {
-            var applist = await getSteamworksAppList();
-            applist = applist.applist.apps.app;
-
-            console.info("Loads all steam applist.");
-            console.info("&nbsp;&nbsp;&nbsp;" + "Now, the number of steam apps is "+
-                        applist.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") +".");
-        } catch(err) {
-            console.warn("Steam api is inaccessible. "+ 
-                        err.status + " " + err.statusText);
-
-            return [/*empty*/];
-        }
-
+    async function initLoad() {
         /* Load from ITAD api */
         try {
             var plainlist = await getITADPlainList();
@@ -138,34 +124,43 @@ GinfoBuilder = (function() {
             console.warn("ITAD api is inaccessible. "+ 
                         err.status + " " + err.statusText);
 
-            return [/*empty*/];
+            return [[/*empty*/],[/*empty*/],[/*empty*/]];
         }
-        
-        /* Combining the both data */
-        return applist.map(app=> ({
-            gid: String(app.appid),
-            name: app.name,
-            plain: plainlist.data.steam["app/"+app.appid] })
-        );
-    };
 
+        var steamworksapplist = await getSteamworksAppList();
+        var steamlist = {};
+        steamworksapplist.applist.apps.forEach(app => {
+            steamlist[app.appid] = app.name;
+        });
+
+        var applist = Object.keys(plainlist.data.steam).filter(gid=>/^app/.test(gid)).map(gid=> ({
+                gid : gid.replace(/^app\//,""),
+                plain : plainlist.data.steam[gid],
+                name : steamlist[gid.replace(/^app\//,"")] }) ),
+            sublist = Object.keys(plainlist.data.steam).filter(gid=>/^sub/.test(gid)).map(gid=> ({
+                gid : gid.replace(/^sub\//,""),
+                plain : plainlist.data.steam[gid] }) ),
+            bundlelist = Object.keys(plainlist.data.steam).filter(gid=>/^bundle/.test(gid)).map(gid=> ({
+                gid : gid.replace(/^bundle\//,""),
+                plain : plainlist.data.steam[gid] }) );
+                
+        return [applist, sublist, bundlelist];
+    };
 
     /** @function    loadBase (async)
      *  @description Check whether there is data in db, and if not, load it.
      *  @return      {Promise<boolean>} */
     async function loadBase() {
-        try {
-            if( await idxDB.isExist() ) {
-                return true;
-            } else {
-                /* Import data from outside */
-                const glist = await externalLoad();
-                /* Write the data in DB */
-                idxDB.write( glist );
-                return true;
-            }
-        } catch(_) { 
-            console.warn("Error in isExist of IndexedDB."); 
+        if( !await idxDB.isEmpty() ) {
+            return true;
+        } else {
+            /* Import data from outside */
+            const [applist, sublist, bundlelist] = await initLoad();
+            /* Write the data in DB */
+            idxDB.write("app", applist );
+            idxDB.write("sub", sublist );
+            idxDB.write("bundle", bundlelist );
+            return true;
         }
     };
 
@@ -174,15 +169,16 @@ GinfoBuilder = (function() {
      *  @description Select gids that are no errors and needs to be updated.
      *  @param       {gids} rqst_gids   Gids requested by the user.
      *  @return      {Promise<glist>} */
-    async function gidSelector(rqst_gids) {
-        const need_gids = rqst_gids.filter(gid => !cache.get(gid));
-        const glist = await idxDB.read(need_gids);
-        const recycle = rqst_gids.filter(gid=>cache.get(gid));
-        const load = glist.map(gdata=>gdata.gid);
-        const error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
+    async function gidSelector(category, rqst_gids) {
+        const need_gids = rqst_gids.filter(gid => !cache.get(gid)),
+              glist = await idxDB.read(category, need_gids),
+              recycle = rqst_gids.filter(gid=>cache.get(gid)),
+              load = glist.map(gdata=>gdata.gid),
+              error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
                                 .filter(gid=> load.indexOf(gid)===-1);
         
-        console.info("Load: "+load+" / "+
+        console.info("("+category+") "+
+                    "Load: "+load+" / "+
                     "recycle: "+recycle+" / "+
                     "error: "+error);
                         
@@ -283,9 +279,9 @@ GinfoBuilder = (function() {
          *  @description Build information based on the request gids.
          *  @param       {gids} rqst_gids   Request gids.
          *  @return      {Promise<ginfolist>} Returns collected information.*/
-        build : async function(rqst_gids) {
+        build : async function(category, rqst_gids) {
             await   loadBase();
-            return  gidSelector(rqst_gids).then(selcted_glist => 
+            return  gidSelector(category, rqst_gids).then(selcted_glist => 
                     loadMore(selcted_glist)).then(extend_glist => 
                     cache.set(extend_glist)).then(cache =>
                     resultSelector(rqst_gids,cache)).then(result_glist =>
@@ -330,10 +326,11 @@ var idxDB = (function() {
     }
 
     var db;
-    const dbName = "ginfoDB";
-    const version = 1;
-    const dbTable = "ginfoTable";
-    const primaryKey = "gid";
+    const dbName = "ginfoDB",
+          version = 2,
+          primaryKey = "gid",
+          defaultTable = "app",
+          table = ["app","dlc","sub","bundle"];
     //const candidateKey = "plain";
 
     var loadDB = function() {
@@ -352,7 +349,8 @@ var idxDB = (function() {
                     db = res.target.result;
                     console.info("request upgrade");
                     
-                    let objectStore = db.createObjectStore( dbTable, {keyPath: primaryKey});
+                    table.forEach(each=>
+                        db.createObjectStore( each, {keyPath: primaryKey}));
                     //objectStore.createIndex(candidateKey, candidateKey, { unique: true });
                 }
             });
@@ -363,11 +361,11 @@ var idxDB = (function() {
     
 
     return {
-        write: async function(objects) {
+        write: async function(table, objects) {
             await loadDB();
 
             return new Promise(function(resolve, reject) {
-                let transaction = db.transaction(dbTable, "readwrite");
+                let transaction = db.transaction(table, "readwrite");
                 transaction.oncomplete = ()=> { //callback
                     console.info("Write transaction success");
                     resolve();
@@ -376,19 +374,19 @@ var idxDB = (function() {
                     console.warn("Write transaction error");
                     reject();
                 }
-                let objectStore = transaction.objectStore(dbTable);
+                let objectStore = transaction.objectStore(table);
 
                 objects.forEach(object => {
                     objectStore.add(object);
                 });
             });
         },
-        read: async function(keys) {
+        read: async function(table, gids) {
             await loadDB();
             var objects = [];
 
             return new Promise(function(resolve, reject) {
-                let transaction = db.transaction(dbTable, "readonly");
+                let transaction = db.transaction(table, "readonly");
                     transaction.oncomplete = ()=> {
                         console.log("Read transaction success");
                         resolve(objects);
@@ -397,10 +395,10 @@ var idxDB = (function() {
                         console.warn("Read transaction error");
                         reject();
                     }
-                let objectStore = transaction.objectStore(dbTable);
+                let objectStore = transaction.objectStore(table);
 
-                keys.forEach(key => {
-                    var readRequest = objectStore.get(key);
+                gids.forEach(gid => {
+                    var readRequest = objectStore.get(gid);
                     readRequest.onsuccess = function(event) {
                         if(event.target.result !== undefined) {
                             objects.push( event.target.result );
@@ -409,19 +407,19 @@ var idxDB = (function() {
                 });
             });
         },
-        readAll: async function(dataType) {
+        readAll: async function(table, dataType) {
             await loadDB();
             var objects = [];
 
             return new Promise(function(resolve, reject) {
-                let transaction = db.transaction(dbTable, "readwrite");
+                let transaction = db.transaction(table, "readwrite");
                     transaction.oncomplete = ()=> {
                         console.log("ReadAll transaction success");
                     }
                     transaction.onerror = () => {
                         console.error("ReadAll transaction error");
                     }
-                let objectStore = transaction.objectStore(dbTable);
+                let objectStore = transaction.objectStore(table);
                 objectStore.openCursor().onsuccess = function(event) {
                     var cursor = event.target.result;
                     if( cursor ) {
@@ -434,13 +432,41 @@ var idxDB = (function() {
                 }
             });
         },
-        isExist: async function() {
+        isExist: async function(table, gids) {
+            await loadDB();
+            var exist = [],
+                notexist = [];
+
+            return new Promise(function(resolve, reject) {
+                let transaction = db.transaction(table, "readonly");
+                    transaction.oncomplete = ()=> {
+                        console.log("isExist transaction success");
+                        resolve([exist, notexist]);
+                    }
+                    transaction.onerror = () => {
+                        console.warn("isExist transaction error");
+                        reject();
+                    }
+                let objectStore = transaction.objectStore(table);
+
+                gids.forEach(gid => {
+                    var readRequest = objectStore.get(gid);
+                    readRequest.onsuccess = function(event) {
+                        exist.push( event.target.result.gid );
+                    };
+                    readRequest.onerror = function(event) {
+                        notexist.push( event.target.result.gid );
+                    }
+                });
+            });
+        },
+        isEmpty: async function() {
             await loadDB();
 
             return new Promise(function(resolve, reject) {
-                    let objectStore = db.transaction(dbTable, "readonly").objectStore(dbTable);
+                    let objectStore = db.transaction(defaultTable, "readonly").objectStore(defaultTable);
                     objectStore.count().onsuccess = function(event) {
-                        resolve(event.target.result !== 0);
+                        resolve(event.target.result === 0);
                     };
                 });
         },
@@ -448,7 +474,7 @@ var idxDB = (function() {
             await loadDB();
 
             return new Promise(function(resolve, reject) {
-                let objectStore = db.transaction(dbTable, "readwrite").objectStore(dbTable);
+                let objectStore = db.transaction(defaultTable, "readwrite").objectStore(defaultTable);
                 objectStore.clear().onsuccess = function() {
                     console.log("Clear transaction success");
                     resolve();

@@ -1,20 +1,19 @@
 /**
- * steamCb - v0.4.0 - 2019-01-08
+ * steamCb - v0.4.1 - 2019-01-15
  * @requires jQuery v3.3.1+
  * @requires jQuery-ui v1.12.1+
  * @requires spin.js v2.3.2 (https://github.com/fgnass/spin.js)
- * @requires css.js v0.1 (modified) (https://github.com/jotform/css.js)
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
  * @requires fontawesome v4.7.0 (https://fontawesome.com/v4.7.0/)
  * 
  * https://github.com/NarciSource/steamCb.js
- * Copyright 2018. Narci. all rights reserved.
+ * Copyright 2018-2019. Narci. all rights reserved.
  * Licensed under the MIT license
  */
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.0",
+        version: "0.4.1",
         options: {
             width: "auto",
             height: "auto",
@@ -34,8 +33,6 @@
             if(typeof this.options.record === "string")
                 this.options.record = $(this.options.record);
 
-            this.options.style = new cssjs().parseCSS(this.options.style);
-
             this._preheat();
             this._setEvent();
         },
@@ -47,9 +44,9 @@
         _setEvent: function() {
             var that = this; //To keep the scope within the callback
 
-            /* Search bar */
-            (async function ($search_bar, $search_icon, $article) {
-                let gids = [],
+            /*------- Search bar -------*/
+            (async function ($search_bar, $search_icon, $searchCategory, $article) {
+                let gids = { app: [], sub: [], bundle: [], all: [] },
                     process = function() {
                         if(gids.length === 0) {
                             /* search by gids */
@@ -59,63 +56,89 @@
                         if(!$article.children("table").length) {//no table
                             that.addTable();
                         }
-                        that.addGames(gids.slice()); 
-                        gids = [/*empty*/];
-                        $search_bar.val("");
+                        
+                        Object.keys(gids).filter(category=>gids[category].length).forEach(category=> {
+                            that.addGames(category, gids[category]);
+                        });
+                    },
+                    clear = function() {
+                        gids= { app: [], sub: [], bundle: [], all: [] };
+                        $search_bar
+                            .val("")
+                            .data("uiAutocomplete").menu.element.hide();
                     };
+                
+                var category = "app"; //default
+                $searchCategory
+                    .on("change", function() {
+                        category = this.value;
+                    });
+                    
                 $search_icon
-                    .on("click", process);
-
+                    .on("click", ()=>{ 
+                        process();
+                        clear();
+                    });
+                
                 $search_bar
                     .attr("disabled","disabled")
+                    /* Auto complete search */
                     .autocomplete({
-                        /* Auto complete search */
                         source : function(request, response) {
+                            if( category === "all") {
+                                var searchList = Object.assign( that.searchList["app"], that.searchList["sub"], that.searchList["bundle"] );
+                            } else {
+                                var searchList = that.searchList[ category ];
+                            }
+
                             response( $.ui.autocomplete.filter(
-                                that.searchList, (request.term).split( /,\s*/ ).pop()
+                                searchList, (request.term).split( /,\s*/ ).pop()
                             ));
                         },
                         search : function() {
-                            // Search from 5 letters or more.
                             let term = (this.value).split( /,\s*/ ).pop();
-                            if(term.length < 5) {
+                            if(term.length < 5) { // Search from 5 letters or more.
                                 return false;
                             }
                         },
-                        select : function(_, ui) {
+                        select : function(event, ui) {
                             let terms = (this.value).split( /,\s*/ );
-                            terms.pop();
-                            terms.push( ui.item.label );
-                            gids.push( ui.item.gid );
-                            terms.push("");
+                            terms.pop(), terms.push( ui.item.label ), terms.push("");
                             this.value = terms.join(", ");
+ 
+                            gids[ category ].push( ui.item.gid );
                             return false;
-                        }  
+                        }
                     })
                     .on("keydown", function (key) {
                         if(key.keyCode == 13) { //enter-key
                             process();
+                            clear();
                         }
-                    });
-            })(this.head.find("input.cb-searchBar"), this.head.find("i.cb-searchIcon"), this.article);
+                    })
+                    .data("uiAutocomplete").close = function(e) {
+                        return false;
+                    };
+
+            })(this.head.find("input.cb-searchBar"), this.head.find("i.cb-searchIcon"), this.head.find("select.cb-searchCategory"), this.article);
             
 
-            /* Add a table */
+            /*------- Add a table -------*/
             this.element.find("i.cb-btnAddTable")
                     .on("click", function() { 
                         console.info("table");
                         that.addTable(); });
 
 
-            /* Select a theme */
-            this.element.find("select.selStyle")
+            /*------- Select a theme -------*/
+            this.element.find(".cb-selStyle > select")
                     .on("click", function() {
                         that.options.theme = "."+this.value;
                         localStorage["theme"] = this.value; 
                         console.info("Change the theme")});
 
 
-            /* Hides/show the article */
+            /*------- Hides/show the article -------*/
             (function ($btnShow, $article) {
                 if($btnShow.length === 0) return;
                 if( localStorage["side-show"] === "hide" ) {
@@ -142,14 +165,14 @@
             })(this.element.find("i.cb-btnShow"), this.article);
 
 
-            /* Erase */
+            /*------- Erase -------*/
             this.element.find("i.cb-btnDelete")
                     .on("click", function() { 
                         that.article.children().not("tr.cb-sortable-disabled").remove();
                         sessionStorage["command"] = [];
                         console.info("Erase"); });    
             
-            /* Erase the trashbox */
+            /*------- Erase the trashbox -------*/
             this.trashbox.find("tr.cb-sortable-disabled")
                     .on("click", function() { 
                         $(this) .siblings().not("tr.cb-sortable-disabled")
@@ -157,7 +180,7 @@
                         console.info("Erase"); });
 
 
-            /* Copy to clipboard */
+            /*------- Copy to clipboard -------*/
             this.element.find("i.cb-btnCopyToClip")
                     .on("click", function () {
                         ((el) => {
@@ -183,7 +206,7 @@
                         document.execCommand("Copy");});
 
 
-            /* Reset DB and stroage */
+            /*------- Reset DB and stroage -------*/
             var real_click=false;
             this.element.find("i.cb-btnReset")
                     .on("click", function () {
@@ -208,13 +231,13 @@
 
 
   
-            /* Connect the tables and apply the sortable */
+            /*------- Connect the tables and apply the sortable -------*/
             this.element.find(".cb-connectedSortable")
                     .sortable({ cancel: ".cb-sortable-disabled",
                                 connectWith: ".cb-connectedSortable" });
             
 
-            /* Intercept Console */
+            /*------- Intercept Console -------*/
             (function ($message) {
                 var console_capture = function() {
                             window.console.info = function(msg) {
@@ -244,7 +267,7 @@
 
 
 
-            /* Record $article's contents in sessionStorage */
+            /*------- Record $article's contents in sessionStorage -------*/
             (function ($article, $trashbox) {
                 var contents_recording = function() {
                         let command = [];
@@ -303,7 +326,9 @@
                         return {label: value.name, gid: value.gid};
                     };
                     
-                    this.searchList = await idxDB.readAll(dataType);
+                    this.searchList = { app: await idxDB.readAll("app",dataType),
+                                        sub: await idxDB.readAll("sub",dataType),
+                                        bundle: await idxDB.readAll("bundle",dataType) };
                     localStorage["searchList"] = JSON.stringify(this.searchList);
 
                 } else {
@@ -315,7 +340,7 @@
         },
 
         popUp: function(arg) {
-            arg = arg || {width:610, height:750}; //default
+            arg = arg || {width:720, height:850}; //default
             
             if(!this.element.hasClass("ui-dialog")) {
                 this.element
@@ -383,19 +408,22 @@
                     .addClass("cb-connectedSortable")
                     .sortable({connectWith: ".cb-connectedSortable"});
 
+            
+            /* engrave style */
+            $table.engraveStyle(this.options.style, this.options.theme);
 
-            /* style */
-            $table.attr("style",                        this.options.style[this.options.theme+" table"].rules)
-                .find("tbody").attr("style",            this.options.style[this.options.theme+" tbody"].rules)
-                .parent().find("thead").attr("style",   this.options.style[this.options.theme+" thead"].rules)
-                .find("th").attr("style",               this.options.style[this.options.theme+" th"].rules);
                 
 
             console.info("Table has been added");
         },
 
 
-        addGames: async function(gids) {
+        addGames: async function(category, gids) {
+            if(gids === undefined) {
+                gids = category;
+                category = "app";
+            }
+
             let spinner = new Spinner(this._spinner_opts).spin();
             spinner.spin(); //new
             this.head.append( $(spinner.el).css("display","inline") );
@@ -411,7 +439,7 @@
 
                 try {
                 /* writing record */
-                const glist = await GinfoBuilder.build(gids);
+                const glist = await GinfoBuilder.build(category, gids);
                 var records = glist.map(ginfo => {
                     let $record = $tr.clone();
 
@@ -469,8 +497,7 @@
                             default : return $("<a/>", {
                                                 href: ginfo.url_history,
                                                 html: $("<span/>", {
-                                                        text: "$ "+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'),
-                                                        style: "white-space: nowrap;"}) });
+                                                        text: "$"+ginfo.lowest_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}) });
                         }})(ginfo.lowest_price));                            
                     
                     /* retail field */
@@ -480,8 +507,7 @@
                             default : return  $("<a/>", {
                                                 href: ginfo.url_price_info,
                                                 html: $("<span/>", {
-                                                        text: "$ "+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'),
-                                                        style: "white-space: nowrap;"}) });
+                                                        text: "$"+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}) });
                         }})(ginfo.retail_price));
                     
                     return $record;
@@ -492,23 +518,20 @@
                 }
 
                 /* Add records to the last table. */
-                let $table = this.article.find("table").last()
+                let $table = this.article.find("table").last();
                 records.forEach($record => $record.appendTo($table.children("tbody")));
                 
 
                 /* update tablesorter */
                 $table.trigger("updateAll");
-                $table.find("th").css("-moz-user-select","text");
+                $table.find("th").css({ "user-select": "text",
+                                        "-moz-user-select": "text",
+                                        "-webkit-user-select": "text",
+                                        "-ms-user-select": "text"});
                 
 
-                /* record style */
-                $table.find("td").attr("style",             this.options.style[this.options.theme+" td"].rules);
-                if(this.options.style[this.options.theme+" a"]!==undefined) {
-                    $table.find("a > span").attr("style",   this.options.style[this.options.theme+" a"].rules);
-                }
-                $table.find(`td[name="game"]`).css("text-align","left")
-                    .siblings(`td[name="lowest"]`).css("text-align","right")
-                    .siblings(`td[name="retail"]`).css("text-align","right");
+                /* engrave style */
+                $table.find("td").engraveStyle(this.options.style, this.options.theme);
             }
             spinner.stop();
         },
@@ -534,5 +557,40 @@
             position: 'relative' // Element positioning
         }
     });
+
+    
+
+    $.fn.engraveStyle = function(styleSheet, classFilter) {
+        classFilter = classFilter || "";
+        parentFilter = ".parent";
+        
+        var doc = document.implementation.createHTMLDocument(""),
+        styleElement = document.createElement("style");
+
+        styleElement.textContent = styleSheet;
+        doc.body.appendChild(styleElement);
+
+        var cssRules = styleElement.sheet.cssRules;
+        Object.keys(cssRules)
+            .filter(i=> cssRules[i].selectorText.includes(classFilter) || cssRules[i].selectorText.includes(parentFilter) )
+            .forEach(i=> {
+                var cssRule = cssRules[i],
+                    selectors = cssRule.selectorText
+                                    .split( /,\s*/ )
+                                    .filter(selector=> selector.includes(classFilter) || selector.includes(parentFilter) )
+                                    .map(selector=> selector.replace(classFilter,"").replace(parentFilter,"").trim());
+
+                Object.keys(cssRule.style)
+                    .forEach(i=> {
+                        var property = cssRule.style[i],
+                            value = cssRule.style[property];
+                         
+                        selectors.forEach(selector=> 
+                            this.find(selector).addBack(selector).css(property, value)
+                        );
+                    });
+            });
+        return this;
+    }
 
  })( jQuery, window, document);

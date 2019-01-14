@@ -1,14 +1,13 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.12
+// @version      0.1.13
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/spin.js
-// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/jquery.tablesorter.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
@@ -21,9 +20,6 @@
 // @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.meta.js
 // @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.user.js
 // @grant        GM.getResourceUrl
-// @connect      cdn.steam.tools
-// @connect      api.isthereanydeal.com
-// @connect      api.steamcardexchange.net
 // @license      MIT
 // ==/UserScript==
 
@@ -72,7 +68,7 @@ $(".tablesorter").tablesorter({
     $(".cb-table td")
         .filter((_, item)=> item.innerText.includes("$"))
         .each((_, item)=> {
-            const changed = "₩ "+( Number(item.innerText.substring(2)) * exchange.USDKRW[0] )
+            const changed = "₩"+( Number(item.innerText.substring(1)) * exchange.USDKRW[0] )
                                     .toFixed(0).replace(/\d{2}\b/g, '00').replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
             item.innerHTML = item.innerHTML.replace(item.innerText, changed);
     });
@@ -85,8 +81,8 @@ $(".tablesorter").tablesorter({
 
 
 
-// Add style
-var addStyle = async function(resource_url) {
+// Add stylesheet
+const addStyle = async function(resource_url) {
     $("<link>", {
         rel : "stylesheet",
         type : "text/css",
@@ -97,29 +93,6 @@ addStyle("cb-style");
 addStyle("ts-style");
 
 
-
-// Create a pop-up access button at the top
-var $applet = undefined;
-$(`<li><a class="login_A">
-        <label id="lb-chart-make" style="cursor:pointer">차트만들기</label>
-    </a></li>`)
-        .insertBefore($('li.first_login'))
-        .children().children().first()
-        .on("click", function() {
-            
-            (async function() {
-                if(!$applet) {
-                        $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                        $applet.appendTo("body")
-                                .steamCb({  style : await $.get(await GM.getResourceUrl("table-style")),
-                                            theme : ".eevee",
-                                            field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                            record : {game: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
-                    }
-
-                $applet.steamCb("popUp", {width:610, height:750});
-            })();
-        });
 
 
 
@@ -135,35 +108,76 @@ $(`<li><a class="login_A">
 })();
 
 
-// Extract the game list of ITCM.
-if( $("div.steam_read_selected").length) {
-    $(`<div align="right"><button id="takeITCMchart" style="cursor:pointer">추출</button></div>`)
-        .insertBefore($("div.steam_read_selected table"))
-        .click(() => {
-            let gids = $(".steam_read_selected tbody .app > .item_image")
-                        .map((_, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
-                        .toArray();
-                        
-            (async function() {
-                if(!$applet) {
+
+// Create a pop-up access button at the to
+var $applet = undefined;
+$("<li/>", {
+    html: $("<a/>", {
+            class: 'login_A',
+            style: 'cursor:pointer',
+            text: "차트만들기"}),
+    on: {
+        click: async function() {
+            if(!$applet) {
                     $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
                     $applet.appendTo("body")
                             .steamCb({  style : await $.get(await GM.getResourceUrl("table-style")),
                                         theme : ".eevee",
                                         field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                        record : {game: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+                                        record : {game: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                 }
 
-                $applet.steamCb("popUp")
-                        .steamCb("addTable")
-                        .steamCb("addGames", gids);
-            })();
-        })
-        .children().css({"background-color":"#333",
-                        "border":"2px solid #333",
-                        "width":"90px",
-                        "padding" : "5px 10x",
-                        "display" : "inline-block",
-                        "font-weight":"bold",
-                        "color":"#FFF"});
+            $applet.steamCb("popUp", {width:720, height:850});
+        }
+    }
+}).prependTo($("ul.wrap_login div"));
+
+
+// Extract the game list of ITCM.
+if( $("div.steam_read_selected").length) {
+    $("<div/>", {
+        css: {'position': 'absolute',
+              'margin': '0px 0px 0px 735px',
+              'background': 'rgb(51, 51, 51)',
+              'border-radius': '0px 20px 20px 0px' },
+        html: $("<div/>", {
+                class: 'fa fa-magic',
+                css: {'padding': '5px 15px 3px 10px',
+                      'color': 'white',
+                      'font-size': '15px',
+                      'line-height': '20px',
+                      'cursor': 'pointer' },
+                on: {
+                    mouseenter: function() {
+                        $(this).animate({ deg: 360 }, {
+                                    duration: 600,
+                                    step: function(now) {
+                                        $(this).css({ transform: 'rotate(' + now + 'deg)' });
+                                    },
+                                    complete: function() {
+                                        $(this)[0].deg=0;
+                                    }
+                                }
+                        );
+                    },
+                    click: async function() {
+                        let gids = $(".steam_read_selected tbody .app > .item_image")
+                                    .map((_, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
+                                    .toArray();
+                        
+                        if(!$applet) {
+                            $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
+                            $applet.appendTo("body")
+                                    .steamCb({  style : await $.get(await GM.getResourceUrl("table-style")),
+                                                theme : ".eevee",
+                                                field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
+                                                record : {game: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+                        }
+        
+                        $applet.steamCb("popUp")
+                                .steamCb("addTable")
+                                .steamCb("addGames", gids);
+                    }
+                } })
+    }).insertBefore($("div.steam_read_selected"));
 }

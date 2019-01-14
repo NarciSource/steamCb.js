@@ -38,7 +38,7 @@ this.$ = window.jQuery.noConflict(true);
     $(".cb-table td")
         .filter((_, item)=> item.innerText.includes("$"))
         .each((_, item)=> {
-            const changed = "₩ "+( Number(item.innerText.substring(2)) * exchange.USDKRW[0] )
+            const changed = "₩"+( Number(item.innerText.substring(1)) * exchange.USDKRW[0] )
                                     .toFixed(0).replace(/\d{2}\b/g, '00').replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
             item.innerHTML = item.innerHTML.replace(item.innerText, changed);
     });
