@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.13
+// @version      0.1.14
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
-// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/spin.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/jquery.tablesorter.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
@@ -45,7 +44,7 @@ $(".tablesorter").tablesorter({
     }
 });
 
-/* Change the amount in cb-table at the current exchange rate. */
+// Change the amount in cb-table at the current exchange rate.
 (async function() {
     try{
 
@@ -99,8 +98,9 @@ addStyle("ts-style");
 // Create a side applet
 (async function() {
     let $side = $(await $.get(await GM.getResourceUrl("side-layout")));
-    $side.steamCb({ style: await $.get(await GM.getResourceUrl("table-style")),
-                    theme: ".itcm",
+    $side.steamCb({ idTag : "cb-0",
+                    style : await $.get(await GM.getResourceUrl("table-style")),
+                    theme : ".itcm",
                     field : {game: "Game", cards: "C", archvment: "A", bundles: "B", lowest: "Lowest"},
                     record : {game: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?"} });
 
@@ -121,13 +121,14 @@ $("<li/>", {
             if(!$applet) {
                     $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
                     $applet.appendTo("body")
-                            .steamCb({  style : await $.get(await GM.getResourceUrl("table-style")),
+                            .steamCb({  idTag : "cb-1",
+                                        style : await $.get(await GM.getResourceUrl("table-style")),
                                         theme : ".eevee",
                                         field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
                                         record : {game: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                 }
 
-            $applet.steamCb("popUp", {width:720, height:850});
+            $applet.steamCb("popUp");
         }
     }
 }).prependTo($("ul.wrap_login div"));
@@ -168,7 +169,8 @@ if( $("div.steam_read_selected").length) {
                         if(!$applet) {
                             $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
                             $applet.appendTo("body")
-                                    .steamCb({  style : await $.get(await GM.getResourceUrl("table-style")),
+                                    .steamCb({  idTag : "cb-1",
+                                                style : await $.get(await GM.getResourceUrl("table-style")),
                                                 theme : ".eevee",
                                                 field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
                                                 record : {game: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });

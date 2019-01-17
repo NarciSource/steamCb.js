@@ -1,8 +1,7 @@
 /**
- * steamCb - v0.4.1 - 2019-01-15
+ * steamCb - v0.4.2 - 2019-01-18
  * @requires jQuery v3.3.1+
  * @requires jQuery-ui v1.12.1+
- * @requires spin.js v2.3.2 (https://github.com/fgnass/spin.js)
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
  * @requires fontawesome v4.7.0 (https://fontawesome.com/v4.7.0/)
  * 
@@ -13,8 +12,10 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.1",
+        version: "0.4.2",
         options: {
+            idTag: "defaultCb",
+            theme: ".default",
             width: "auto",
             height: "auto",
         },
@@ -22,19 +23,46 @@
         _create: function() {
             console.info("new steamCb");
 
+            /* shortcut */
             this.head = this.element.find(".cb-header");
             this.article = this.element.find(".cb-article");
             this.aside = this.element.find(".cb-aside");
             this.message = this.element.find(".cb-message");
             this.trashbox = this.element.find(".cb-trashbox");
+            this.setting = this.element.find(".cb-setting");
+            
 
-            if(typeof this.options.table === "string")
-                this.options.table = $(this.options.table);
-            if(typeof this.options.record === "string")
-                this.options.record = $(this.options.record);
+            /* Set the working zone of the pregressbar. */
+            this._____search_progressbar_zone_____ = new Zone({
+                    start: ()=> this.element.find(".cb-search__progressbar").css("visibility","visible"),
+                    end: ()=> this.element.find(".cb-search__progressbar").css("visibility","hidden"),
+                    monitor: true }).simply();
 
-            this._preheat();
+            this._____setting_progressbar_zone_____ = new Zone({
+                    start: ()=> this.setting.find(".cb-setting__progressbar").css("visibility","visible"),
+                    end: ()=> this.setting.find(".cb-setting__progressbar").css("visibility","hidden"),
+                    }).simply();
+
+
+            /* priority: localStorage(user) > create option(code) */
+            this._downloadLocalStorage();
+            this._updateLocalStorage();
+
+
+            /* visable main / hide setting */
+            this.element.children(".cb-setting").css("display","none")
+                        .siblings().not(".cb-setting").css("display","flex");
+
+
+            /* Set textarea in setting tab */
+            this.setting.find(".cb-setting__option--styleSheet").val( this.options.style );
+            this.setting.find(".cb-setting__option--field").val( JSON.stringify(this.options.field, null, 2) );
+            this.setting.find(".cb-setting__option--record").val( JSON.stringify(this.options.record, null, 2) );
+
+
+
             this._setEvent();
+            this._preheat();
         },
 
         _init: function() {
@@ -45,7 +73,7 @@
             var that = this; //To keep the scope within the callback
 
             /*------- Search bar -------*/
-            (async function ($search_bar, $search_icon, $searchCategory, $article) {
+            (async function ($search, $search_bar, $search_icon, $searchCategory, $article) {
                 let gids = { app: [], sub: [], bundle: [], all: [] },
                     process = function() {
                         if(gids.length === 0) {
@@ -68,22 +96,29 @@
                             .data("uiAutocomplete").menu.element.hide();
                     };
                 
+                /* progress bar */
+                $search.progressbar({
+                    classes: {"ui-progressbar-value":"cb-search__progressbar"},
+                    value: false
+                }).css({"border":"0px"});
+
+                /* search category */
                 var category = "app"; //default
                 $searchCategory
                     .on("change", function() {
                         category = this.value;
                     });
                     
+                /* search icon */
                 $search_icon
                     .on("click", ()=>{ 
                         process();
                         clear();
                     });
                 
+                /* search bar */
                 $search_bar
-                    .attr("disabled","disabled")
-                    /* Auto complete search */
-                    .autocomplete({
+                    .autocomplete({ /* Auto complete search */
                         source : function(request, response) {
                             if( category === "all") {
                                 var searchList = Object.assign( that.searchList["app"], that.searchList["sub"], that.searchList["bundle"] );
@@ -120,53 +155,74 @@
                         return false;
                     };
 
-            })(this.head.find("input.cb-searchBar"), this.head.find("i.cb-searchIcon"), this.head.find("select.cb-searchCategory"), this.article);
+            })(this.head.find(".cb-search"), this.head.find(".cb-search__bar"), this.head.find(".cb-search__icon"), this.head.find(".cb-search__category"), this.article);
             
-
+                    
             /*------- Add a table -------*/
-            this.element.find("i.cb-btnAddTable")
+            this.element.find("i.cb-btn--add-table")
                     .on("click", function() { 
                         console.info("table");
                         that.addTable(); });
 
 
+            /*------- Parses classes from the stylesSheet. -------*/
+            let classes = (function(styleSheet) {
+                let doc = document.implementation.createHTMLDocument(""),
+                    styleElement = document.createElement("style");
+
+                styleElement.textContent = styleSheet;
+                doc.body.appendChild(styleElement);
+
+                let cssRules = styleElement.sheet.cssRules,  classes = new Set();
+
+                Object.keys(cssRules).forEach(i=> classes.add( /^.\w+/.exec(cssRules[i].selectorText)[0] ) );
+                
+                return classes;
+            })(this.options.style);
+            
+            classes.forEach(classname=> {
+                this.element.find(".cb-sel-style__select")
+                    .append(new Option(classname.substring(1).toUpperCase(), classname));
+            });
+
+            this.element.find(".cb-sel-style__select").val( this.options.theme );
+
+
             /*------- Select a theme -------*/
-            this.element.find(".cb-selStyle > select")
+            this.element.find(".cb-sel-style__select")
                     .on("click", function() {
-                        that.options.theme = "."+this.value;
-                        localStorage["theme"] = this.value; 
-                        console.info("Change the theme")});
+                        that.options.theme = this.value;
+                        that._updateLocalStorage(); })
+                    .on("change", function() {
+                        console.info("The table theme changed to "+this.value)});
 
 
             /*------- Hides/show the article -------*/
             (function ($btnShow, $article) {
-                if($btnShow.length === 0) return;
+                if( $btnShow.length === 0 ) return;
                 if( localStorage["side-show"] === "hide" ) {
-                    $btnShow.addClass("fa-minus-circle");
-                    $btnShow.removeClass("fa-plus-circle");
+                    $btnShow.switchClass("fa-plus-circle", "fa-minus-circle");
                     $article.css("display", "none");
                 } else {
-                    $btnShow.addClass("fa-plus-circle");
-                    $btnShow.removeClass("fa-minus-circle");
-                    $article.css("display", "block");
+                    $btnShow.switchClass("fa-minus-circle", "fa-plus-circle");
+                    $article.css("display", "flex");
                 }
 
                 $btnShow.on("click", function() {
-                            $(this).toggleClass("fa-plus-circle");
-                            $(this).toggleClass("fa-minus-circle");
-                            if($(this).hasClass("fa-plus-circle")) {
-                                $article.css("display", "block");
-                                localStorage["side-show"] = "show";
-                            } else {
-                                $article.css("display", "none");
-                                localStorage["side-show"] = "hide";
-                            }
-                        })
-            })(this.element.find("i.cb-btnShow"), this.article);
+                    $(this).toggleClass("fa-plus-circle fa-minus-circle");
+                    if($(this).hasClass("fa-plus-circle")) {
+                        $article.css("display", "flex");
+                        localStorage["side-show"] = "show";
+                    } else {
+                        $article.css("display", "none");
+                        localStorage["side-show"] = "hide";
+                    }
+                })
+            })(this.element.find(".cb-btn--show"), this.article);
 
 
             /*------- Erase -------*/
-            this.element.find("i.cb-btnDelete")
+            this.element.find(".cb-btn--delete")
                     .on("click", function() { 
                         that.article.children().not("tr.cb-sortable-disabled").remove();
                         sessionStorage["command"] = [];
@@ -181,51 +237,101 @@
 
 
             /*------- Copy to clipboard -------*/
-            this.element.find("i.cb-btnCopyToClip")
+            this.element.find(".cb-btn--copy-to-clip")
                     .on("click", function () {
-                        ((el) => {
+                        ((elements) => {
                             var body = document.body, range, sel;
                             if (document.createRange && window.getSelection) {
-                                range = document.createRange();
                                 sel = window.getSelection();
                                 sel.removeAllRanges();
-                                try {            
-                                    range.selectNodeContents(el);
-                                    sel.addRange(range);
-                                } catch (e) {
-                                    range.selectNode(el);
-                                    sel.addRange(range);
-                                }
+                                elements.each((_, el)=> {
+                                    range = document.createRange();
+                                    try {
+                                        range.selectNodeContents(el);
+                                        sel.addRange(range);
+                                    } catch (e) {
+                                        range.selectNode(el);
+                                        sel.addRange(range);
+                                    }
+                                });
                             } else if (body.createTextRange) {
                                 range = body.createTextRange();
                                 range.moveToElementText(el);
                                 range.select();
                             }
-                        })( that.article[0]);
+                        })( that.article.children());
                         console.info("Copy to clipboard");
                         document.execCommand("Copy");});
 
 
+        
+
+
+            /*------- Setting tab -------*/
+            this.element.find(".cb-btn--setting-in")
+                    .on("click", ()=> {
+                        this.element.children(".cb-setting").css("display","flex")
+                                    .siblings().not(".cb-setting").css("display","none");
+                    });
+            this.element.find(".cb-btn--setting-out")
+                    .on("click", ()=> {
+                        this.element.children().not(".cb-setting").css("display","flex")
+                                    .siblings(".cb-setting").css("display","none");
+                    });
+            this.element.find(".cb-btn--save")
+                    .on("click", ()=> {
+                        this._____setting_progressbar_zone_____(()=> {
+                            this.options.style = this.element.find(".cb-setting__option--styleSheet").val();
+                            this.options.field = JSON.parse( this.element.find(".cb-setting__option--field").val() );
+                            this.options.record = JSON.parse( this.element.find(".cb-setting__option--record").val() );
+                            
+                            this._updateLocalStorage();    
+                        }, {
+                            mintime:1000*1
+                        }).then(()=>console.log("Saved setting"));
+                    });
+            this.element.find(".cb-setting__progressbar")
+                    .progressbar({value: false});
+
+                    
             /*------- Reset DB and stroage -------*/
-            var real_click=false;
-            this.element.find("i.cb-btnReset")
+            this.element.find(".cb-btn--reset")
                     .on("click", function () {
-                        if(!real_click) {
-                            console.warn("! Warning !");
-                            console.warn("This action clears the db and requests a list of all games from the Steam Server.");
-                            console.warn("If you would like to update newly released game on Steam, please continue this action.");
-                            console.warn("Press the button again, if you really want to proceed.");
-                            console.warn("This process takes tens of seconds.");
-                            real_click=true;
-                        } else {
-                            idxDB.clear();
-                            sessionStorage.clear();
-                            localStorage.clear();
-                            that.head.find("input.cb-searchBar")
-                                .attr("disabled","disabled");
-                            console.warn("Reset! Please refresh on page.");
-                            real_click=false;
-                        }
+                        $("<div/>").dialog({
+                            title: "Warning",
+                            width: 400,
+                            closeText: "",
+                            show: { effect: "bounce", duration: 2000 },
+                            hide: { effect: "clip", duration: 200 },
+                            classes: {
+                                "ui-dialog":"cb-dialog",
+                                "ui-dialog-title":"cb-dialog-title--alert",
+                                "ui-dialog-titlebar":"ui-dialog-titlebar cb-dialog-titlebar cb-dialog-titlebar--alert",
+                                "ui-dialog-titlebar-close":"cb-dialog-titlebar-close",
+                                "ui-dialog-content":"cb-dialog-content--alert",
+                                "ui-dialog-buttonpane":"cb-dialog-buttonpane--alert",
+                                "ui-dialog-buttonset":"cb-dialog-buttonset--alert"
+                            },
+                            open: function() { 
+                                $(this).parent().find(".ui-icon-closethick").switchClass("ui-icon ui-icon-closethick","cb-icon-closethick fa fa-times",0);
+   
+                                $(this).append($("<p>", {text: "This action clears the db and requests a list of all games from the Steam Server." }))
+                                        .append($("<p>", {text: "If you would like to update newly released game on Steam, please continue this action."}))
+                                        .append($("<p>", {text: "This process takes a few minutes after this page refresh."}))
+                            },                                                
+                            buttons: {
+                                Okay: {
+                                    click: function() {
+                                        idxDB.clear();
+                                        sessionStorage.clear();
+                                        localStorage.clear();
+                                        location.reload();
+                                    },
+                                    text: "Okay",
+                                    class: "cb-dialog-button--alert"
+                                }
+                            }
+                        }).dialog("open");
                     });
 
 
@@ -259,10 +365,11 @@
                                 console_capture.call(that);
                             } else {
                                 console_release.call(that);
-                            } });
+                            }
+                });
                 $message.on("DOMNodeInserted", function() {
                             $(this).scrollTop($(this).prop("scrollHeight"));
-                        });
+                });
             })(this.message);
 
 
@@ -282,25 +389,17 @@
                 $trashbox.on("DOMNodeInserted", contents_recording);
 
             })(this.article, this.trashbox);
-        
         },
 
-        _preheat: async function() {
-            /* GinfoBuilder preheat */
-            let spinner = new Spinner(this._spinner_opts).spin();
-            this.head.append( $(spinner.el).css("display","inline") );
-            {
+        _preheat: function() {
+            this._____search_progressbar_zone_____(async ()=> {
+                /* GinfoBuilder preheat */
+                console.info("preheat: Loading DB.");
                 await GinfoBuilder.preheat();
-                console.info("preheat");
 
-                this.head.find("input.cb-searchBar")
-                        .removeAttr("disabled");
-            }
-            spinner.stop();
-            
-            /* Return previous memory */
-            spinner.spin();
-            {
+
+                /* Return previous memory */
+                console.info("preheat: Loading previous table.");
                 if(sessionStorage["command"]) {
                     const command = JSON.parse(sessionStorage["command"]);
 
@@ -313,13 +412,10 @@
                         }
                     }
                 }
-            }
-            spinner.stop();
-            
-            /* Load search list */
-            spinner.spin();
-            this.head.append( $(spinner.el).css("display","inline") );
-            {
+
+                
+                /* Load search list */
+                console.info("preheat: Loading Search list.")
                 this.searchList = localStorage["searchList"];
                 if(!this.searchList) {
                     const dataType = function(value) {
@@ -334,35 +430,50 @@
                 } else {
                     this.searchList = JSON.parse(this.searchList);
                 }
-                console.info("Load search list.");
-            }
-            spinner.stop();
+                
+            })
+            .then(()=>console.info("preheat completed."))
+            .catch(e=>console.warn(e));
+        },
+        
+        _downloadLocalStorage: function() {
+            if( localStorage[ this.options.idTag ] )
+                this.options = JSON.parse( localStorage[ this.options.idTag ] );
         },
 
-        popUp: function(arg) {
-            arg = arg || {width:720, height:850}; //default
-            
-            if(!this.element.hasClass("ui-dialog")) {
-                this.element
-                    .dialog({
-                        title: "steamCb",
-                        resizable: true,
-                        autoOpen: false,
-                        closeText: "",
-                        show: { effect: "blind", duration: 2000 },
-                        hide: { effect: "explode", duration: 2000 },
-                        width: arg.width, height: arg.height,
-                        open: function(event, ui) {
-                            $(".ui-icon-closethick", $(this).parent())
-                                .removeClass("ui-icon")
-                                .addClass("fa").addClass("fa-times")
-                                .addClass("ui-cb-close");
-                        } })
-                    .dialog("widget")
-                    .draggable("option", "containment", "none");
-            }
+        _updateLocalStorage: function() {
+            localStorage[ this.options.idTag ] = JSON.stringify( this.options );
+        },
 
-            this.element.dialog("open");
+
+        popUp: function(arg) {
+            let that = this;
+            arg = arg || {width: this.options.width || 720, height: this.options.height || 850}; //default
+            
+            this.element
+                .dialog({
+                    title: "steamCb",
+                    resizable: true,
+                    autoOpen: true,
+                    closeText: "",
+                    show: { effect: "scale", duration: 1000 },
+                    hide: { effect: "clip", duration: 500 },
+                    width: arg.width, height: arg.height,
+                    classes: {
+                        "ui-dialog":"cb-dialog",
+                        "ui-dialog-titlebar":"ui-dialog-titlebar cb-dialog-titlebar",
+                        "ui-dialog-title":"cb-dialog-title",
+                        "ui-dialog-titlebar-close":"cb-dialog-titlebar-close"
+                    },
+                    open: function(event, ui) {
+                        $(this).parent().find(".ui-icon-closethick").switchClass("ui-icon ui-icon-closethick","cb-icon-closethick fa fa-times",0);
+                    },
+                    resizeStop: function() {
+                        that.options.width = $(this).width();
+                        that.options.height = $(this).height();
+                        that._updateLocalStorage();
+                    }
+                });
         },
 
         popDelete: function() {
@@ -419,15 +530,13 @@
 
 
         addGames: async function(category, gids) {
-            if(gids === undefined) {
-                gids = category;
-                category = "app";
-            }
+            await this._____search_progressbar_zone_____(async()=> {
 
-            let spinner = new Spinner(this._spinner_opts).spin();
-            spinner.spin(); //new
-            this.head.append( $(spinner.el).css("display","inline") );
-            {
+                if(gids === undefined) {
+                    gids = category;
+                    category = "app";
+                }
+
                 /* make */
                 let $tr = $("<tr/>");
                 $.each(this.options.record, (name, text)=> {
@@ -437,7 +546,6 @@
                     }).appendTo($tr);
                 });
 
-                try {
                 /* writing record */
                 const glist = await GinfoBuilder.build(category, gids);
                 var records = glist.map(ginfo => {
@@ -511,11 +619,11 @@
                         }})(ginfo.retail_price));
                     
                     return $record;
-                });                
-                    
-                } catch(err) {
-                    console.warn(err);
-                }
+                });
+
+                /* engrave style */
+                records.forEach($record => $record.find("td").engraveStyle(this.options.style, this.options.theme));
+
 
                 /* Add records to the last table. */
                 let $table = this.article.find("table").last();
@@ -528,44 +636,23 @@
                                         "-moz-user-select": "text",
                                         "-webkit-user-select": "text",
                                         "-ms-user-select": "text"});
-                
-
-                /* engrave style */
-                $table.find("td").engraveStyle(this.options.style, this.options.theme);
-            }
-            spinner.stop();
-        },
-
-        _spinner_opts: {
-            lines: 8, // The number of lines to draw
-            length: 5, // The length of each line
-            width: 9, // The line thickness
-            radius: 16, // The radius of the inner circle
-            scale: 0.35, // Scales overall size of the spinner
-            corners: 1, // Corner roundness (0..1)
-            color: '#000000', // CSS color or array of colors
-            fadeColor: 'transparent', // CSS color or array of colors
-            speed: 1, // Rounds per second
-            rotate: 0, // The rotation offset
-            animation: 'spinner-line-fade-quick', // The CSS animation name for the lines
-            direction: 1, // 1: clockwise, -1: counterclockwise
-            zIndex: 2e9, // The z-index (defaults to 2000000000)
-            className: 'spinner', // The CSS class to assign to the spinner
-            top: '4px', // Top position relative to parent
-            left: '1px', // Left position relative to parent
-            shadow: '0 0 1px transparent', // Box-shadow for the lines
-            position: 'relative' // Element positioning
+                            
+            })
+            .then(()=>console.info("Added games"))
+            .catch(()=>console.warn("error"));
         }
     });
 
     
-
+    /**
+     * The engraveStyle plugin parses the stylesheet and engraves the selected class into the object.
+     * */
     $.fn.engraveStyle = function(styleSheet, classFilter) {
         classFilter = classFilter || "";
-        parentFilter = ".parent";
+        parentFilter = ".default";
         
         var doc = document.implementation.createHTMLDocument(""),
-        styleElement = document.createElement("style");
+            styleElement = document.createElement("style");
 
         styleElement.textContent = styleSheet;
         doc.body.appendChild(styleElement);
@@ -585,8 +672,8 @@
                         var property = cssRule.style[i],
                             value = cssRule.style[property];
                          
-                        selectors.forEach(selector=> 
-                            this.find(selector).addBack(selector).css(property, value)
+                        selectors.forEach(selector=> {
+                            this.find(selector).addBack(selector).css(property, value)}
                         );
                     });
             });
@@ -594,3 +681,59 @@
     }
 
  })( jQuery, window, document);
+
+
+
+/** 
+ * The Zone class appends and manages operations at both ends of the zone.
+ * When activating the monitor, start and end of every element in the zone of this object are concatenated. 
+ * */
+function Zone({start, end, monitor}) {
+    this.start = start;
+    this.end = end;
+    this.monitor = monitor || false;
+    this.semaphore = 0;
+};
+Zone.prototype.proc = function(callback, option) {
+    const that = this,
+          defaults = {
+                mintime: 0,
+                maxtime: 1000*60*5 //5minutes
+          };
+
+    option = Object.assign({}, defaults, option);
+    
+    if(!(this.start && {}.toString.call(this.start) === '[object Function]'))
+        this.start = this.start || function() { return undefined };
+    if(!(this.end && {}.toString.call(this.end) === '[object Function]'))
+        this.end = this.end || function() { return undefined };
+    
+    return new Promise(async (resolve, reject)=> {
+        try{
+            if(!that.monitor || that.semaphore === 0) // P
+                that.start();
+            that.semaphore = that.semaphore+1;
+
+            let wait = ms=> new Promise(resolve => setTimeout(resolve, ms));
+                callback = new Promise(async resolve => { 
+                    await callback(); 
+                    resolve();
+                });
+        
+            await Promise.race([ wait(option.maxtime),
+                        Promise.all([ callback, wait(option.mintime) ]) ]);
+            resolve();
+        }
+        catch(e) {
+            reject();
+        }
+        finally {
+            that.semaphore = that.semaphore-1;
+            if(!that.monitor || that.semaphore === 0) // V
+                that.end();
+        }
+    });
+};                
+Zone.prototype.simply = function() {
+    return this.proc.bind(this);
+}

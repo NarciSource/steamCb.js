@@ -1,42 +1,44 @@
-/* .parent inherits from the following classes */
-.parent table {
-    table-layout: fixed;
-    border-collapse: collapse;
-    margin: 0px 0px 15px;
-    width: 100%;
-    font-size: 13px;
+/* .default inherits from the following classes */
+.default table {
     font-family: Arial, sans-serif;
-    text-shadow: 1px 1px rgba(255,255,255,0.94);
+    font-size: 13px;
+
+    margin: 0 0 15px;
+
+    border-collapse: collapse;
+
+    text-shadow: 1px 1px rgba(255,255,255,.94);
 }
-.parent th,
-.parent td {
+.default thead,
+.default tbody {
+    line-height: 20.15px;
+}
+.default th,
+.default td {
     padding: 3px 10px;
+
     text-align: center;
+
+    border: 1px solid gray;
 }
-.parent th {
-    width: -max-content;
-    width: -moz-max-content;
-    width: -webkit-max-content;
-    width: -o-max-content;
-}
-.parent th[name="game"] {
+.default th[name='game'] {
     width: auto;
 }
-.parent th[name="retail"] {
+.default th[name='retail'] {
     padding: 3px 13px;
 }
-.parent th[name="ratings"] {
+.default th[name='ratings'] {
     padding: 3px 35px;
 }
-.parent td[name="game"] {
+.default td[name='game'] {
     text-align: left;
 }
-.parent td[name="lowest"],
-.parent td[name="retail"] {
+.default td[name='lowest'],
+.default td[name='retail'] {
     text-align: right;
 }
-.parent td[name="lowest"] span,
-.parent td[name="retail"] span {
+.default td[name='lowest'] span,
+.default td[name='retail'] span {
     white-space: nowrap;
 }
 
@@ -47,21 +49,18 @@
     color: #2c2f32;
 }
 .eevee thead {
-    background-color: #ffdb52;
+    line-height: 25.15px;
+
     border-top: 1px solid #d7a44f;
     border-bottom: 2px solid #d7a44f;
-    line-height: 25.15px;
+    background-color: #ffdb52;
 }
 .eevee th {
     border: 1px solid #d7a44f;
 }
-.eevee tbody {
-    line-height: 20.15px;
-    font-weight: 400;
-}
 .eevee td {
-    background-color: #fdf0c8;
     border: 1px solid #fdcf83;
+    background-color: #fdf0c8;
 }
 
 
@@ -70,17 +69,11 @@
     color: rgb(70,86,112);
 }
 .itcm thead {
-    background-color:#f6f6f6;
     border-bottom: 1px solid rgb(70,86,112);
-    font-weight:700;
-    line-height:20.15px;
+    background-color: #f6f6f6;
 }
 .itcm th {
     border: 1px solid rgb(210,214,224);
-}
-.itcm tbody {
-    font-weight: 400;
-    line-height: 20.15px;
 }
 .itcm td {
     border: 1px solid rgb(210,214,224);
@@ -89,26 +82,23 @@
 
 /* xmas */
 .xmas table {
-    color: #FFF;
+    color: #fff;
     text-shadow: none;
 }
 .xmas thead {
-    background-color: #15854b;
     border-top: 1px solid #31355b;
     border-bottom: 2px solid #31355b;
-    line-height: 25.15px;
+    background-color: #15854b;
 }
 .xmas th {
     border: 1px solid #fff;
 }
 .xmas tbody {
-    font-weight: 400;
-    line-height: 20.15px;
     color: #fff;
 }
 .xmas td {
+    border: 1px solid #fff;
     background-color: #be3e3f;
-    border: 1px solid #fff; 
 }
 .xmas a {
     color: #fff !important;
@@ -120,21 +110,12 @@
     color: rgb(70,86,112);
 }
 .sg thead {
-    background-color:rgb(232,234,239);
     border-bottom: 1px solid rgb(70,86,112);
-    font-weight:700;
-    line-height:20.15px;
+    background-color: rgb(232,234,239);
 }
 .sg th {
     border: 1px solid rgb(210,214,224);
 }
-.sg tbody {
-    font-weight:400;
-    line-height: 20.15px;
-}
 .sg td {
     border: 1px solid rgb(210,214,224);
 }
-
-
-
