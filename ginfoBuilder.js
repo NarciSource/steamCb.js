@@ -127,7 +127,17 @@ GinfoBuilder = (function() {
             return [[/*empty*/],[/*empty*/],[/*empty*/]];
         }
 
-        var steamworksapplist = await getSteamworksAppList();
+        try {
+            var steamworksapplist = await getSteamworksAppList();
+
+            console.info("Loads steam games all list");
+        } catch(err) {
+            console.warn("Steam api is inaccessible. "+ 
+                        err.status + " " + err.statusText);
+
+            return [[/*empty*/],[/*empty*/],[/*empty*/]];
+        }
+        
         var steamlist = {};
         steamworksapplist.applist.apps.forEach(app => {
             steamlist[app.appid] = app.name;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.14
+// @version      0.1.15
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -19,6 +19,7 @@
 // @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.meta.js
 // @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.user.js
 // @grant        GM.getResourceUrl
+// @grant        GM.xmlHttpRequest
 // @license      MIT
 // ==/UserScript==
 
@@ -26,8 +27,47 @@
 // Greasemonkey is a sandbox, but not tempermonkey, jquery crash prevention.
 this.$ = window.jQuery.noConflict(true);
 
-'use strict';
+// Overwrite GM.xmlHttpRequest in $.ajax to avoid Access-Control-Allow-Origin.
+const originAjax = $.ajax;
+$.ajax = function(url, options) {
+    if ( typeof url === "object" ) {
+        options = url;
+        url = undefined;
+    }
+    console.info(options.type || "GET", options.url);
 
+    let dfd = $.Deferred();
+
+    GM.xmlHttpRequest( $.extend( {}, options, {
+        method: "GET",
+        onload: response => {
+            let headers = {};
+            response.responseHeaders.split(/\n/).forEach( header => {
+                let result;
+                if( result = /([\w-]+): (.*)/gi.exec(header) ) {
+                    headers[ result[1].toLowerCase() ] = result[2].toLowerCase();
+                }
+            });
+
+            let [mime, mime_type, mime_subtype] = /(^\w+)\/(\w+)/g.exec( headers["content-type"] );
+            switch(mime_subtype) {
+                case "xml":
+                    dfd.resolve( new DOMParser().parseFromString( response.responseText, mime ) );
+                    break;
+                case "json":
+                    dfd.resolve( JSON.parse(response.responseText) );
+                    break;
+            }
+            dfd.resolve(response.responseText);
+        },
+        onerror: error => dfd.reject(error)
+       })
+    );
+
+    return dfd.promise();
+};
+
+'use strict';
 
 // Apply the tablesorter effect to the cb-table.
 $(".tablesorter").tablesorter({

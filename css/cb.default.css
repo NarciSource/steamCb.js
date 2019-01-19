@@ -145,6 +145,7 @@
 
     cursor: pointer;
     text-align: center;
+    text-align-last:center;
 
     color: var(--highlight-darkblue);
     border: solid #d2d6e0;
