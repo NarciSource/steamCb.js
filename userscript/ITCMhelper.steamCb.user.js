@@ -34,7 +34,11 @@ $.ajax = function(url, options) {
         options = url;
         url = undefined;
     }
+    if( /^blob:(\w+)/.test( options.url ) ) {
+        return originAjax(url, options);
+    }
     console.info(options.type || "GET", options.url);
+
 
     let dfd = $.Deferred();
 
