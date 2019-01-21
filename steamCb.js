@@ -524,8 +524,13 @@
                 ),
                 on: {
                     mouseup: function() {
-                        $(this) .trigger("updateAll")
-                                .focus();
+                        $(this) .focus()
+                                .trigger("updateAll")
+                                .find("th")
+                                    .css({  "user-select": "text",
+                                            "-moz-user-select": "text",
+                                            "-webkit-user-select": "text",
+                                            "-ms-user-select": "text"});;
                     },
                     focusin: function() { /* focus selected table */
                         that.focused_table.toggleClass("cb-tablehighlight");
@@ -668,7 +673,7 @@
 
                 /* Add records to the focused table. */
                 if (this.focused_table.length === 0) this.addTable();
-                this.focused_table.children("tbody").html(records);
+                this.focused_table.children("tbody").append(records);
             })
             .then(()=>console.info("Added games"))
             .catch(()=>console.warn("error"));
