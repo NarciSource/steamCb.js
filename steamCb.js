@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.4.2 - 2019-01-18
+ * steamCb - v0.4.3 - 2019-01-22
  * @requires jQuery v3.3.1+
  * @requires jQuery-ui v1.12.1+
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
@@ -30,6 +30,9 @@
             this.message = this.element.find(".cb-message");
             this.trashbox = this.element.find(".cb-trashbox");
             this.setting = this.element.find(".cb-setting");
+          
+            /* table focus */
+            this.focused_table = $(/*null*/);
             
 
             /* Set the working zone of the pregressbar. */
@@ -158,10 +161,17 @@
             })(this.head.find(".cb-search"), this.head.find(".cb-search__bar"), this.head.find(".cb-search__icon"), this.head.find(".cb-search__category"), this.article);
             
                     
+            /*------- Table focus release -------*/
+            this.article
+                    .attr("tabindex",0)
+                    .focus(function() {
+                        that.focused_table.toggleClass("cb-tablehighlight");
+                        that.focused_table = $(/*null*/);//release
+                    });
+
             /*------- Add a table -------*/
             this.element.find("i.cb-btn--add-table")
                     .on("click", function() { 
-                        console.info("table");
                         that.addTable(); });
 
 
@@ -345,17 +355,27 @@
 
             /*------- Intercept Console -------*/
             (function ($message) {
-                var console_capture = function() {
-                            window.console.info = function(msg) {
-                                $message.append(msg + "<br>"); };
-                            window.console.warn = function(msg) {
-                                $message.append(`<font color="red">` + msg + `</font>` + "<br>"); }; },
+                let console_capture = function() {
+                            window.console.info = function() {
+                                for (let i=0; i<arguments.length; i++) {
+                                    $message.append(arguments[i]+" ");
+                                }
+                                $message.append("<br>");
+                            };
+                            window.console.warn = function() {
+                                $message.append(`<font color="red">`);
+                                for (let i=0; i<arguments.length; i++) {
+                                    $message.append(arguments[i]+" ");
+                                }
+                                $message.append(`</font><br>`);
+                            };
+                    },
                     console_release = function() {
                             let i = document.createElement('iframe');
                             i.style.display = 'none';
                             document.body.appendChild(i);
                             window.console = i.contentWindow.console;
-                };
+                    };
                 if($message.find("input:checkbox").is(":checked")) {
                     console_capture.call(that);
                 }
@@ -481,25 +501,43 @@
         },
 
         addTable: function() {
-            /* make */
-            let $table = $("<table/>", {
-                            class: "cb-table",
-                            html: $("<thead/><tbody/>") }),
-                $tr = $("<tr/>");
+            let that = this;
 
-            $.each(this.options.field, (name, text)=> {
-                $("<th/>", {
-                    name: name,
-                    text: text
-                }).appendTo($tr);
-            });
-            $table.appendTo(this.article)
-                  .children("thead").append($tr);
-
-            
-            /* sorter */
-            $table.addClass("tablesorter")
-                  .tablesorter({
+            $("<table/>", {
+                class: "cb-table tablesorter",
+                attr: { tabindex:0 },
+                html: $.merge(
+                    $("<thead/>", {
+                        html: $("<tr/>", {
+                                html: $.map( that.options.field, (text, name)=> 
+                                        $("<th/>", {
+                                            name: name,
+                                            text: text
+                                        })
+                                    )
+                            })
+                    }),
+                    $("<tbody/>", { /* connect sortable */
+                        class: "cb-connectedSortable",
+                        sortable: { connectWith: ".cb-connectedSortable" }
+                    })
+                ),
+                on: {
+                    mouseup: function() {
+                        $(this) .trigger("updateAll")
+                                .focus();
+                    },
+                    focusin: function() { /* focus selected table */
+                        that.focused_table.toggleClass("cb-tablehighlight");
+                        that.focused_table = $(this);
+                        that.focused_table.toggleClass("cb-tablehighlight");
+                    }
+                },
+                engraveStyle: { /* engrave style */
+                    styleSheet: that.options.style, 
+                    classFilter: that.options.theme
+                },
+                tablesorter: { /* sorter */
                     textExtraction : function(node) {
                         if($(node).find("span").text() === "?") return -1;
                         return $(node).find("span").text().replace("%","");
@@ -511,19 +549,8 @@
                             return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
                         }
                     }
-                });
-                    
-
-            /* connectedSortable */
-            $table.find("tbody")
-                    .addClass("cb-connectedSortable")
-                    .sortable({connectWith: ".cb-connectedSortable"});
-
-            
-            /* engrave style */
-            $table.engraveStyle(this.options.style, this.options.theme);
-
-                
+                }
+            }).focusin().appendTo(this.article);
 
             console.info("Table has been added");
         },
@@ -538,17 +565,18 @@
                 }
 
                 /* make */
-                let $tr = $("<tr/>");
-                $.each(this.options.record, (name, text)=> {
-                    $("<td/>", {
-                        name: name,
-                        text: text
-                    }).appendTo($tr);
-                });
+                const $tr = $("<tr/>", {
+                        html: $.map( this.options.record, (text, name)=> 
+                                $("<td/>", {
+                                    name: name,
+                                    text: text
+                                }
+                        ))
+                    }),
+                    glist = await GinfoBuilder.build(category, gids);
 
                 /* writing record */
-                const glist = await GinfoBuilder.build(category, gids);
-                var records = glist.map(ginfo => {
+                let records = $.map( glist, ginfo => {
                     let $record = $tr.clone();
 
                     /* record identification */
@@ -618,25 +646,29 @@
                                                         text: "$"+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}) });
                         }})(ginfo.retail_price));
                     
-                    return $record;
+                    return $record[0];
                 });
 
                 /* engrave style */
-                records.forEach($record => $record.find("td").engraveStyle(this.options.style, this.options.theme));
-
-
-                /* Add records to the last table. */
-                let $table = this.article.find("table").last();
-                records.forEach($record => $record.appendTo($table.children("tbody")));
+                $(records).find("td")
+                        .engraveStyle({
+                            styleSheet: this.options.style, 
+                            classFilter: this.options.theme
+                        });
                 
 
                 /* update tablesorter */
-                $table.trigger("updateAll");
-                $table.find("th").css({ "user-select": "text",
-                                        "-moz-user-select": "text",
-                                        "-webkit-user-select": "text",
-                                        "-ms-user-select": "text"});
-                            
+                this.focused_table.trigger("updateAll")
+                    .find("th")
+                        .css({  "user-select": "text",
+                                "-moz-user-select": "text",
+                                "-webkit-user-select": "text",
+                                "-ms-user-select": "text"});
+
+
+                /* Add records to the focused table. */
+                if (this.focused_table.length === 0) this.addTable();
+                this.focused_table.children("tbody").html(records);
             })
             .then(()=>console.info("Added games"))
             .catch(()=>console.warn("error"));
@@ -647,7 +679,7 @@
     /**
      * The engraveStyle plugin parses the stylesheet and engraves the selected class into the object.
      * */
-    $.fn.engraveStyle = function(styleSheet, classFilter) {
+    $.fn.engraveStyle = function({styleSheet, classFilter}) {
         classFilter = classFilter || "";
         parentFilter = ".default";
         
@@ -667,15 +699,14 @@
                                     .filter(selector=> selector.includes(classFilter) || selector.includes(parentFilter) )
                                     .map(selector=> selector.replace(classFilter,"").replace(parentFilter,"").trim());
 
-                Object.keys(cssRule.style)
-                    .forEach(i=> {
-                        var property = cssRule.style[i],
-                            value = cssRule.style[property];
+                for(let i=0;i<cssRule.style.length;i++) {
+                    var property = cssRule.style[i],
+                        value = cssRule.style[property];
                          
                         selectors.forEach(selector=> {
                             this.find(selector).addBack(selector).css(property, value)}
                         );
-                    });
+                }
             });
         return this;
     }

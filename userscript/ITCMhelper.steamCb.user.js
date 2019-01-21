@@ -34,26 +34,22 @@ $.ajax = function(url, options) {
         options = url;
         url = undefined;
     }
-    if( /^blob:(\w+)/.test( options.url ) ) {
-        return originAjax(url, options);
-    }
     console.info(options.type || "GET", options.url);
-
 
     let dfd = $.Deferred();
 
     GM.xmlHttpRequest( $.extend( {}, options, {
         method: "GET",
         onload: response => {
-            let headers = {};
-            response.responseHeaders.split(/\n/).forEach( header => {
-                let result;
-                if( result = /([\w-]+): (.*)/gi.exec(header) ) {
-                    headers[ result[1].toLowerCase() ] = result[2].toLowerCase();
-                }
-            });
+            const headerRegex = /([\w-]+): (.*)/gi;
+                  mimeRegex = /(^\w+)\/(\w+)/g;
 
-            let [mime, mime_type, mime_subtype] = /(^\w+)\/(\w+)/g.exec( headers["content-type"] );
+            let headers = {}, match;
+            while( match = headerRegex.exec(response.responseHeaders) ) {
+                headers[ match[1].toLowerCase() ] = match[2].toLowerCase();
+            }
+
+            let [mime, mime_type, mime_subtype] = mimeRegex.exec( headers["content-type"] );
             switch(mime_subtype) {
                 case "xml":
                     dfd.resolve( new DOMParser().parseFromString( response.responseText, mime ) );
@@ -65,8 +61,7 @@ $.ajax = function(url, options) {
             dfd.resolve(response.responseText);
         },
         onerror: error => dfd.reject(error)
-       })
-    );
+    }));
 
     return dfd.promise();
 };

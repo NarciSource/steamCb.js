@@ -35,6 +35,9 @@
     box-sizing: border-box;
     width: 100%;
 }
+.cb-tablehighlight {
+    outline: dashed HotPink;
+}
 .cb-toolbox {
     display: flex;
 
