@@ -1,15 +1,19 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.15
+// @version      0.1.16
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/require.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-css.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-json.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/jquery.tablesorter.js
-// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @resource     popup-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/popup.html
 // @resource     side-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/side.html
 // @resource     cb-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/cb.default.css
@@ -19,5 +23,6 @@
 // @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.meta.js
 // @downloadURL  https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.user.js
 // @grant        GM.getResourceUrl
+// @grant        GM.xmlHttpRequest
 // @license      MIT
 // ==/UserScript==

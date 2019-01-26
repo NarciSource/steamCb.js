@@ -33,11 +33,11 @@ GinfoBuilder = (function() {
             Object.assign(this, gdata);
         }
         get url_store() {
-            return "https://store.steampowered.com/app/"+this.gid; }
+            return `https://store.steampowered.com/app/${this.gid}`; }
         get url_cards() {
-            return "https://www.steamcardexchange.net/index.php?gamepage-appid-"+this.gid; }
+            return `https://www.steamcardexchange.net/index.php?gamepage-appid-${this.gid}`; }
         get url_archv() {
-            return "https://astats.astats.nl/astats/Steam_Game_Info.php?AppID="+this.gid; }
+            return `https://astats.astats.nl/astats/Steam_Game_Info.php?AppID=${this.gid}`; }
         set url_price_info(url) {
             this._url_price_info = url; }
         get url_price_info() {
@@ -64,17 +64,17 @@ GinfoBuilder = (function() {
 
     var getSteamworksAppDetail = (appid) => {
             return $.ajax({ //It can't support multiple appid. 400 times limit per a day.
-                url: "https://store.steampowered.com/api/appdetails/?appids="+appid }); },
+                url: `https://store.steampowered.com/api/appdetails/?appids=${appid}` }); },
         getSteamworksPackageDetail = (subid) => { //store package, bundle
             return $.ajax({
-                url: "https://store.steampowered.com/api/packagedetails/?packageids="+subid }); },
+                url: `https://store.steampowered.com/api/packagedetails/?packageids=${subid}` }); },
         getSteamworksAppList = () => {
             return $.ajax({ //Until now, get all appids and their names.
-                url: "http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json"}); },
+                url: `http://api.steampowered.com/ISteamApps/GetAppList/v0002/?format=json`}); },
         getSteamworksPrice = (appids, opt) => { //multiple, filter, but only price, Access-Control-Allow-Origin problem
             opt = opt || {currency:"kr",language:"kr"};
             return $.ajax({
-                url: "https://store.steampowered.com/api/appdetails?appids="+appids.join()+"&cc="+opt.currency+"&l="+opt.language+"&filters=price_overview"});}
+                url: `https://store.steampowered.com/api/appdetails?appids=${appids.join()}&cc=${opt.currency}&l=${opt.language}&filters=price_overview`});}
 
     var getITAD = (url) => {
             const itad_api_key = "a568e3c187a403c913321c49265cac341238d3af"; //mykey
@@ -82,20 +82,22 @@ GinfoBuilder = (function() {
                 url: url.replace('%key%',itad_api_key) }); },
         getITADPlainList = () => {
             const store = "steam";
-            return getITAD("https://api.isthereanydeal.com/v01/game/plain/list/?key=%key%&shops="+store); },
+            return getITAD(`https://api.isthereanydeal.com/v01/game/plain/list/?key=%key%&shops=${store}`); },
         getITADPlain = (gids) => {
             const store = "steam";
-            return getITAD("https://api.isthereanydeal.com/v01/game/plain/id/?key=%key%&shop="+store+"&ids="+gids.map(item => "app/"+item).join()); },
+            return getITAD(`https://api.isthereanydeal.com/v01/game/plain/id/?key=%key%&shop=${store}&ids=${gids.map(item=>"app/"+item).join()}`); },
         getITADInfo = (plains) => {
-            return getITAD("https://api.isthereanydeal.com/v01/game/info/?key=%key%&plains="+plains); },
+            return getITAD(`https://api.isthereanydeal.com/v01/game/info/?key=%key%&plains=${plains}`); },
         getITADPrice = (plains) => { //It does not support Korean currency.
-            return getITAD("https://api.isthereanydeal.com/v01/game/prices/?key=%key%&plains="+plains+"&shops=steam"); },
+            const store = "steam";
+            return getITAD(`https://api.isthereanydeal.com/v01/game/prices/?key=%key%&plains=${plains}&shops=${store}`); },
         getITADLowest = (plains) => {
-            return getITAD("https://api.isthereanydeal.com/v01/game/lowest/?key=%key%&plains="+plains); },
+            return getITAD(`https://api.isthereanydeal.com/v01/game/lowest/?key=%key%&plains=${plains}`); },
         getITADBundles = (plains) => {
-            return getITAD("https://api.isthereanydeal.com/v01/game/bundles/?key=%key%&plains="+plains); },
+            return getITAD(`https://api.isthereanydeal.com/v01/game/bundles/?key=%key%&plains=${plains}`); },
         getITADOverview = (plains) => {
-            return getITAD("https://api.isthereanydeal.com/v01/game/overview/?key=%key%&plains="+plains+"&shop=steam"); };
+            const store = "steam";
+            return getITAD(`https://api.isthereanydeal.com/v01/game/overview/?key=%key%&plains=${plains}&shop=${store}`); };
 
 
 
@@ -187,10 +189,7 @@ GinfoBuilder = (function() {
               error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
                                 .filter(gid=> load.indexOf(gid)===-1);
         
-        console.info("("+category+") "+
-                    "Load: "+load+" / "+
-                    "recycle: "+recycle+" / "+
-                    "error: "+error);
+        console.info(`(${category}) load: ${load} / recycle: ${recycle} / error: ${error}`);
                         
         return glist;
     };

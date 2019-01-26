@@ -1,15 +1,19 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.15
+// @version      0.1.16
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/require.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-css.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-json.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/jquery.tablesorter.js
-// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/ginfoBuilder.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/steamCb.js
 // @resource     popup-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/popup.html
 // @resource     side-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/side.html
 // @resource     cb-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/cb.default.css
@@ -33,6 +37,9 @@ $.ajax = function(url, options) {
     if ( typeof url === "object" ) {
         options = url;
         url = undefined;
+    }
+    if( /^blob:(\w+)/.test( options.url ) ) {
+        return originAjax(url, options);
     }
     console.info(options.type || "GET", options.url);
 
@@ -138,6 +145,7 @@ addStyle("ts-style");
 (async function() {
     let $side = $(await $.get(await GM.getResourceUrl("side-layout")));
     $side.steamCb({ idTag : "cb-0",
+                    hyperlink : false,
                     style : await $.get(await GM.getResourceUrl("table-style")),
                     theme : ".itcm",
                     field : {game: "Game", cards: "C", archvment: "A", bundles: "B", lowest: "Lowest"},
@@ -161,6 +169,7 @@ $("<li/>", {
                     $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
                     $applet.appendTo("body")
                             .steamCb({  idTag : "cb-1",
+                                        hyperlink : false,
                                         style : await $.get(await GM.getResourceUrl("table-style")),
                                         theme : ".eevee",
                                         field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
@@ -192,7 +201,7 @@ if( $("div.steam_read_selected").length) {
                         $(this).animate({ deg: 360 }, {
                                     duration: 600,
                                     step: function(now) {
-                                        $(this).css({ transform: 'rotate(' + now + 'deg)' });
+                                        $(this).css({ transform: `rotate(${now}deg)` });
                                     },
                                     complete: function() {
                                         $(this)[0].deg=0;

@@ -1,10 +1,10 @@
 <div class="cb">
-    <div class="cb-main">
+    <div class="cb-dashboard">
         <div class="cb-header">
             <span class="cb-search">
-                <input type="search" class="cb-search__bar" placeholder="Search..."/>
-                <i class="cb-search__icon fa fa-search"/>
-                <select class="cb-search__category">
+                <input type="search" id="cb-search__bar" placeholder="Search..."/>
+                <i id="cb-search__icon" class="fa fa-search"/>
+                <select id="cb-search__category">
                     <option value="app">Game</option>
                     <option value="dlc">Dlc</option>
                     <option value="sub">Package</option>
@@ -14,9 +14,9 @@
             </span>
                 
             <div class="cb-toolbox">
-                <i class="cb-btn--add-table fa fa-table"/>
-                <i class="cb-btn--copy-to-clip fa fa-clipboard"/>
-                <i class="cb-btn--setting-in fa fa-cog"/>
+                <i id="cb-btn--add-table" class="fa fa-table"/>
+                <i id="cb-btn--copy-to-clip" class="fa fa-clipboard"/>
+                <i id="cb-btn--setting-in" class="fa fa-cog"/>
             </div>
         </div>
         
@@ -27,7 +27,7 @@
         <div class="cb-aside">
             <div class="cb-sel-style">
                 <p class="cb-caption">TableStyle</p>
-                <select class="cb-sel-style__select"/>
+                <select id="cb-sel-style__select"/>
             </div>
     
             <table class="cb-trashbox">
@@ -54,27 +54,40 @@
             <p class="cb-title">Setting Tab</p>
             <div class="cb-setting__progressbar"/>
             <div class="cb-toolbox">
-                <i class="cb-btn--save fa fa-floppy-o"/>
-                <i class="cb-btn--setting-out fa fa-sign-out"/>
+                <i id="cb-btn--save" class="fa fa-floppy-o"/>
+                <i id="cb-btn--setting-out" class="fa fa-sign-out"/>
             </div>
         </div>
         <div class="cb-setting__article">
             <ul class="cb-setting__option">
-                <li class="cb-setting__option__box">
-                    <p class="cb-caption">Table stylesheet</p>
-                    <textarea class="cb-textarea cb-setting__option--styleSheet"/>
+                <li>
+                    <fieldset class="cb-setting__option__box">
+                        <legend class="cb-caption">UI Options</legend>
+                        <input type="checkbox" id="cb-setting__option--hyperlink">
+                        <label for="cb-setting__option--hyperlink">Hypertext link</label>
+                    </fieldset>
                 </li>
-                <li class="cb-setting__option__box">
-                    <p class="cb-caption">Field markup</p>
-                    <textarea class="cb-textarea cb-setting__option--field"/>
+                <li>
+                    <fieldset class="cb-setting__option__box">
+                        <legend class="cb-caption">Field markup</legend>
+                        <div id="cb-setting__option--field" class="cb-textarea"/>
+                    </fieldset>
                 </li>
-                <li class="cb-setting__option__box">
-                    <p class="cb-caption">Record markup</p>
-                    <textarea class="cb-textarea cb-setting__option--record"/>
+                <li>
+                    <fieldset class="cb-setting__option__box">
+                        <legend class="cb-caption">Record markup</legend>
+                        <div id="cb-setting__option--record" class="cb-textarea"/>
+                    </fieldset>
+                </li>
+                <li>
+                    <fieldset class="cb-setting__option__box">
+                        <legend class="cb-caption">Table styleshee</legend>
+                        <div id="cb-setting__option--styleSheet" class="cb-textarea"/>
+                    </fieldset>
                 </li>
             </ul>
 
-            <i class="cb-btn--reset fa fa-database"/>
+            <i id="cb-btn--reset" class="fa fa-database"/>
         </div>
     </div>
 </div>

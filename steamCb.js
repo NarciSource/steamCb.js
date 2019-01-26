@@ -1,7 +1,9 @@
 /**
- * steamCb - v0.4.3 - 2019-01-22
- * @requires jQuery v3.3.1+
- * @requires jQuery-ui v1.12.1+
+ * steamCb - v0.4.4 - 2019-01-26
+ * @requires jQuery v3.3.1+ (https://api.jquery.com/)
+ * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
+ * @requires require v2.3.6 (https://requirejs.org/docs/)
+ * @requires ace v1.4.2 (https://ace.c9.io/)
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
  * @requires fontawesome v4.7.0 (https://fontawesome.com/v4.7.0/)
  * 
@@ -12,7 +14,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.2",
+        version: "0.4.4",
         options: {
             idTag: "defaultCb",
             theme: ".default",
@@ -24,44 +26,35 @@
             console.info("new steamCb");
 
             /* shortcut */
-            this.head = this.element.find(".cb-header");
+            this.dashboard = this.element.find(".cb-dashboard");
             this.article = this.element.find(".cb-article");
-            this.aside = this.element.find(".cb-aside");
-            this.message = this.element.find(".cb-message");
-            this.trashbox = this.element.find(".cb-trashbox");
             this.setting = this.element.find(".cb-setting");
-          
+
+            this.editors = {};
+            this.commands = [];
+
             /* table focus */
-            this.focused_table = $(/*null*/);
-            
+            this.focused_table = $(/*null*/);            
+
+            /* visable dashboard / hide setting */
+            this.setting.hide();
 
             /* Set the working zone of the pregressbar. */
             this._____search_progressbar_zone_____ = new Zone({
-                    start: ()=> this.element.find(".cb-search__progressbar").css("visibility","visible"),
-                    end: ()=> this.element.find(".cb-search__progressbar").css("visibility","hidden"),
-                    monitor: true }).simply();
+                    start: ()=> this.element.find(".cb-search__progressbar").show(),
+                    end: ()=> this.element.find(".cb-search__progressbar").hide(),
+                    monitor: true
+                }).simply();
 
             this._____setting_progressbar_zone_____ = new Zone({
-                    start: ()=> this.setting.find(".cb-setting__progressbar").css("visibility","visible"),
-                    end: ()=> this.setting.find(".cb-setting__progressbar").css("visibility","hidden"),
-                    }).simply();
+                    start: ()=> this.setting.find(".cb-setting__progressbar").show(),
+                    end: ()=> this.setting.find(".cb-setting__progressbar").hide(),
+                }).simply();
 
 
             /* priority: localStorage(user) > create option(code) */
             this._downloadLocalStorage();
             this._updateLocalStorage();
-
-
-            /* visable main / hide setting */
-            this.element.children(".cb-setting").css("display","none")
-                        .siblings().not(".cb-setting").css("display","flex");
-
-
-            /* Set textarea in setting tab */
-            this.setting.find(".cb-setting__option--styleSheet").val( this.options.style );
-            this.setting.find(".cb-setting__option--field").val( JSON.stringify(this.options.field, null, 2) );
-            this.setting.find(".cb-setting__option--record").val( JSON.stringify(this.options.record, null, 2) );
-
 
 
             this._setEvent();
@@ -76,16 +69,12 @@
             var that = this; //To keep the scope within the callback
 
             /*------- Search bar -------*/
-            (async function ($search, $search_bar, $search_icon, $searchCategory, $article) {
+            (async function ($search, $search_bar, $search_icon, $searchCategory) {
                 let gids = { app: [], sub: [], bundle: [], all: [] },
                     process = function() {
                         if(gids.length === 0) {
                             /* search by gids */
                             gids = $search_bar.val().split(",").map(gid=>gid.trim()).filter(gid=> (/^[0-9]*$/).test(gid));
-                        }
-
-                        if(!$article.children("table").length) {//no table
-                            that.addTable();
                         }
                         
                         Object.keys(gids).filter(category=>gids[category].length).forEach(category=> {
@@ -101,9 +90,12 @@
                 
                 /* progress bar */
                 $search.progressbar({
-                    classes: {"ui-progressbar-value":"cb-search__progressbar"},
-                    value: false
-                }).css({"border":"0px"});
+                            classes: {"ui-progressbar-value":"cb-search__progressbar"},
+                            value: false
+                        })
+                        .css({"border":"0",
+                              "background":"transparent"})
+                        .find(".cb-search__progressbar").hide();
 
                 /* search category */
                 var category = "app"; //default
@@ -158,7 +150,8 @@
                         return false;
                     };
 
-            })(this.head.find(".cb-search"), this.head.find(".cb-search__bar"), this.head.find(".cb-search__icon"), this.head.find(".cb-search__category"), this.article);
+            })( this.element.find(".cb-search"), this.element.find("#cb-search__bar"), 
+                this.element.find("#cb-search__icon"), this.element.find("#cb-sel-style__select") );
             
                     
             /*------- Table focus release -------*/
@@ -170,13 +163,14 @@
                     });
 
             /*------- Add a table -------*/
-            this.element.find("i.cb-btn--add-table")
+            this.element.find("#cb-btn--add-table")
                     .on("click", function() { 
-                        that.addTable(); });
+                        that.addTable(); 
+                    });
 
 
             /*------- Parses classes from the stylesSheet. -------*/
-            let classes = (function(styleSheet) {
+            (function(styleSheet, $select) {
                 let doc = document.implementation.createHTMLDocument(""),
                     styleElement = document.createElement("style");
 
@@ -185,26 +179,25 @@
 
                 let cssRules = styleElement.sheet.cssRules,  classes = new Set();
 
-                Object.keys(cssRules).forEach(i=> classes.add( /^.\w+/.exec(cssRules[i].selectorText)[0] ) );
-                
-                return classes;
-            })(this.options.style);
-            
-            classes.forEach(classname=> {
-                this.element.find(".cb-sel-style__select")
-                    .append(new Option(classname.substring(1).toUpperCase(), classname));
-            });
+                Object.values(cssRules).forEach(cssRule=> classes.add( /^.\w+/.exec(cssRule.selectorText)[0] ) );
 
-            this.element.find(".cb-sel-style__select").val( this.options.theme );
+                classes.forEach(classname=> {
+                    $select.append(
+                        new Option(classname.substring(1).toUpperCase(), classname)
+                    );
+                });
+            })(this.options.style, this.element.find("#cb-sel-style__select"));
+
+            this.element.find("#cb-sel-style__select").val( this.options.theme );
 
 
             /*------- Select a theme -------*/
-            this.element.find(".cb-sel-style__select")
+            this.element.find("#cb-sel-style__select")
                     .on("click", function() {
                         that.options.theme = this.value;
                         that._updateLocalStorage(); })
                     .on("change", function() {
-                        console.info("The table theme changed to "+this.value)});
+                        console.info(`The table theme changed to ${this.value}`)});
 
 
             /*------- Hides/show the article -------*/
@@ -212,34 +205,34 @@
                 if( $btnShow.length === 0 ) return;
                 if( localStorage["side-show"] === "hide" ) {
                     $btnShow.switchClass("fa-plus-circle", "fa-minus-circle");
-                    $article.css("display", "none");
+                    $article.hide();
                 } else {
                     $btnShow.switchClass("fa-minus-circle", "fa-plus-circle");
-                    $article.css("display", "flex");
+                    $article.show();
                 }
 
                 $btnShow.on("click", function() {
                     $(this).toggleClass("fa-plus-circle fa-minus-circle");
                     if($(this).hasClass("fa-plus-circle")) {
-                        $article.css("display", "flex");
+                        $article.show();
                         localStorage["side-show"] = "show";
                     } else {
-                        $article.css("display", "none");
+                        $article.hide();
                         localStorage["side-show"] = "hide";
                     }
                 })
-            })(this.element.find(".cb-btn--show"), this.article);
+            })(this.element.find("#cb-btn--show"), this.article);
 
 
             /*------- Erase -------*/
-            this.element.find(".cb-btn--delete")
+            this.element.find("#cb-btn--delete")
                     .on("click", function() { 
-                        that.article.children().not("tr.cb-sortable-disabled").remove();
-                        sessionStorage["command"] = [];
+                        that.article.children().remove();
+                        sessionStorage[`${that.options.idTag}-commands`] = [];
                         console.info("Erase"); });    
             
             /*------- Erase the trashbox -------*/
-            this.trashbox.find("tr.cb-sortable-disabled")
+            this.element.find(".cb-trashbox").find("tr.cb-sortable-disabled")
                     .on("click", function() { 
                         $(this) .siblings().not("tr.cb-sortable-disabled")
                                 .remove();
@@ -247,10 +240,10 @@
 
 
             /*------- Copy to clipboard -------*/
-            this.element.find(".cb-btn--copy-to-clip")
+            this.element.find("#cb-btn--copy-to-clip")
                     .on("click", function () {
                         ((elements) => {
-                            var body = document.body, range, sel;
+                            let body = document.body, range, sel;
                             if (document.createRange && window.getSelection) {
                                 sel = window.getSelection();
                                 sel.removeAllRanges();
@@ -258,9 +251,9 @@
                                     range = document.createRange();
                                     try {
                                         range.selectNodeContents(el);
-                                        sel.addRange(range);
                                     } catch (e) {
                                         range.selectNode(el);
+                                    } finally {
                                         sel.addRange(range);
                                     }
                                 });
@@ -269,43 +262,93 @@
                                 range.moveToElementText(el);
                                 range.select();
                             }
-                        })( that.article.children());
+                        })( (that.focused_table.length!==0)? that.focused_table : that.article.children() );
                         console.info("Copy to clipboard");
-                        document.execCommand("Copy");});
+                        document.execCommand("Copy");
+                    });
 
 
         
 
 
             /*------- Setting tab -------*/
-            this.element.find(".cb-btn--setting-in")
+            this.dashboard.find("#cb-btn--setting-in")
                     .on("click", ()=> {
-                        this.element.children(".cb-setting").css("display","flex")
-                                    .siblings().not(".cb-setting").css("display","none");
+                        this.setting.show();
+                        this.dashboard.hide();
                     });
-            this.element.find(".cb-btn--setting-out")
+            this.setting.find("#cb-btn--setting-out")
                     .on("click", ()=> {
-                        this.element.children().not(".cb-setting").css("display","flex")
-                                    .siblings(".cb-setting").css("display","none");
+                        this.setting.hide();
+                        this.dashboard.show();
                     });
-            this.element.find(".cb-btn--save")
+
+            this.setting.find("#cb-setting__option--hyperlink")
+                    .on("change", function() {
+                        that.article.on("click","a", event=> {
+                            if(this.checked === false) {
+                                event.preventDefault();
+                            } else {
+                                return true;
+                            }
+                        });
+                    })
+                    .prop("checked", this.options.hyperlink)
+                    .change();
+
+            this.setting.find(".cb-setting__progressbar")
+                    .progressbar({value: false})
+                    .hide();
+
+
+            /*------- Code edit div -------*/
+            this.editors = (function($setting, options) {
+                let res = {};
+
+                ace.config.set('basePath', '/ace-builds/src-noconflict');
+                
+                res.field = ace.edit(
+                    $setting.find("#cb-setting__option--field")[0], {
+                    mode: "ace/mode/json",
+                });
+
+                res.record = ace.edit(
+                    $setting.find("#cb-setting__option--record")[0], {
+                    mode: "ace/mode/json",
+                });
+
+                res.styleSheet = ace.edit(
+                    $setting.find("#cb-setting__option--styleSheet")[0], {
+                    mode: "ace/mode/css",
+                    //theme: "ace/theme/tomorrow_night_eighties"
+                });
+
+                res.styleSheet.setValue( options.style );
+                res.field.setValue( JSON.stringify(options.field, null, 2) );
+                res.record.setValue( JSON.stringify(options.record, null, 2) );
+
+                return res;
+            })(this.setting, this.options);
+            
+
+            this.element.find("#cb-btn--save")
                     .on("click", ()=> {
                         this._____setting_progressbar_zone_____(()=> {
-                            this.options.style = this.element.find(".cb-setting__option--styleSheet").val();
-                            this.options.field = JSON.parse( this.element.find(".cb-setting__option--field").val() );
-                            this.options.record = JSON.parse( this.element.find(".cb-setting__option--record").val() );
+                            this.options.style = this.editors.styleSheet.getValue();
+                            this.options.field = JSON.parse( this.editors.field.getValue() );
+                            this.options.record = JSON.parse( this.editors.record.getValue() );
                             
                             this._updateLocalStorage();    
                         }, {
                             mintime:1000*1
-                        }).then(()=>console.log("Saved setting"));
+                        }).then(()=>console.info("Saved setting"));
                     });
-            this.element.find(".cb-setting__progressbar")
-                    .progressbar({value: false});
+
+
 
                     
             /*------- Reset DB and stroage -------*/
-            this.element.find(".cb-btn--reset")
+            this.element.find("#cb-btn--reset")
                     .on("click", function () {
                         $("<div/>").dialog({
                             title: "Warning",
@@ -390,25 +433,25 @@
                 $message.on("DOMNodeInserted", function() {
                             $(this).scrollTop($(this).prop("scrollHeight"));
                 });
-            })(this.message);
+            })( this.element.find(".cb-message") );
 
 
 
             /*------- Record $article's contents in sessionStorage -------*/
             (function ($article, $trashbox) {
                 var contents_recording = function() {
-                        let command = [];
+                        that.commands = [];
                         $article.find("table.cb-table").each((_, table) => {
-                            command.push("table");
+                            that.commands.push("table");
                             $(table).find("tbody tr").each((_, tr) =>
-                                command.push($(tr).attr("name")) );
+                                that.commands.push($(tr).attr("name")) );
                         });
-                        sessionStorage["command"] = JSON.stringify(command);
+                        sessionStorage[`${that.options.idTag}-commands`] = JSON.stringify(that.commands);
                     };
                 $article.on("DOMNodeInserted", contents_recording);
                 $trashbox.on("DOMNodeInserted", contents_recording);
 
-            })(this.article, this.trashbox);
+            })(this.article, this.element.find(".cb-trashbox"));
         },
 
         _preheat: function() {
@@ -420,17 +463,19 @@
 
                 /* Return previous memory */
                 console.info("preheat: Loading previous table.");
-                if(sessionStorage["command"]) {
-                    const command = JSON.parse(sessionStorage["command"]);
+                if (sessionStorage[`${this.options.idTag}-commands`]) {
+                    this.commands = JSON.parse(sessionStorage[`${this.options.idTag}-commands`]);
 
-                    for( let i=0; i<command.length; i++) {
-                        switch(command[i]) {
-                            case "table": this.addTable();
-                            break;
-                            default: await this.addGames([command[i].split("-")[1]]);
-                            break;
+                    this.commands.forEach(async command => {
+                        switch(command) {
+                            case "table": 
+                                this.addTable();
+                                break;
+                            default: 
+                                await this.addGames([command.split("-")[1]]);
+                                break;
                         }
-                    }
+                    });
                 }
 
                 
@@ -510,10 +555,7 @@
                     $("<thead/>", {
                         html: $("<tr/>", {
                                 html: $.map( that.options.field, (text, name)=> 
-                                        $("<th/>", {
-                                            name: name,
-                                            text: text
-                                        })
+                                        $("<th/>", { name, text })
                                     )
                             })
                     }),
@@ -548,9 +590,10 @@
                         return $(node).find("span").text().replace("%","");
                     },
                     textSorter : {
-                        1 : function(a, b) {
-                            const refa = Number(a.match(/\d+/g).join("")),
-                                    refb = Number(b.match(/\d+/g).join(""));
+                        "[name='ratings']" : function(a, b) {
+                            const regx = /^[\w\s]+\((\d+)\)/,
+                                  refa = a==="-1"? -1 : regx.exec(a)[1] ,
+                                  refb = b==="-1"? -1 : regx.exec(b)[1] ;
                             return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
                         }
                     }
@@ -572,11 +615,8 @@
                 /* make */
                 const $tr = $("<tr/>", {
                         html: $.map( this.options.record, (text, name)=> 
-                                $("<td/>", {
-                                    name: name,
-                                    text: text
-                                }
-                        ))
+                                $("<td/>", { name, text })
+                        )
                     }),
                     glist = await GinfoBuilder.build(category, gids);
 
@@ -695,11 +735,10 @@
         doc.body.appendChild(styleElement);
 
         var cssRules = styleElement.sheet.cssRules;
-        Object.keys(cssRules)
-            .filter(i=> cssRules[i].selectorText.includes(classFilter) || cssRules[i].selectorText.includes(parentFilter) )
-            .forEach(i=> {
-                var cssRule = cssRules[i],
-                    selectors = cssRule.selectorText
+        Object.values(cssRules)
+            .filter(cssRule=> cssRule.selectorText.includes(classFilter) || cssRule.selectorText.includes(parentFilter) )
+            .forEach(cssRule=> {
+                var selectors = cssRule.selectorText
                                     .split( /,\s*/ )
                                     .filter(selector=> selector.includes(classFilter) || selector.includes(parentFilter) )
                                     .map(selector=> selector.replace(classFilter,"").replace(parentFilter,"").trim());
