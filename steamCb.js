@@ -1,11 +1,12 @@
 /**
- * steamCb - v0.4.4 - 2019-01-26
+ * steamCb - v0.4.5 - 2019-02-03
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
  * @requires ace v1.4.2 (https://ace.c9.io/)
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
  * @requires fontawesome v4.7.0 (https://fontawesome.com/v4.7.0/)
+ * @requires magicsuggest v2.1.4 (http://nicolasbize.com/magicsuggest/doc.html)
  * 
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018-2019. Narci. all rights reserved.
@@ -14,7 +15,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.4",
+        version: "0.4.5",
         options: {
             idTag: "defaultCb",
             theme: ".default",
@@ -66,92 +67,74 @@
         },
 
         _setEvent: function() {
-            var that = this; //To keep the scope within the callback
+            const that = this; //To keep the scope within the callback
 
             /*------- Search bar -------*/
-            (async function ($search, $search_bar, $search_icon, $searchCategory) {
-                let gids = { app: [], sub: [], bundle: [], all: [] },
-                    process = function() {
-                        if(gids.length === 0) {
-                            /* search by gids */
-                            gids = $search_bar.val().split(",").map(gid=>gid.trim()).filter(gid=> (/^[0-9]*$/).test(gid));
-                        }
-                        
-                        Object.keys(gids).filter(category=>gids[category].length).forEach(category=> {
-                            that.addGames(category, gids[category]);
+            this.searchEngine = (function ($search, $search_bar, $search_icon, $searchCategory) {
+                let process = function() {
+                        that.addGames(  category, 
+                                        searchEngine.getSelection().map(s=>s.gid?s.gid:s.name).filter(s=>$.isNumeric(s)) );
+                        searchEngine.clear();
+                };
+
+                /* search category */
+                var category = "app"; //default
+                $searchCategory
+                        .on("change", function() {
+                            category = this.value;
+                            searchEngine.setData( 
+                                category==="all"?
+                                    $(this).find("option").map(function() {
+                                        return that.searchList[ $(this).val() ];
+                                    })
+                                    : that.searchList[ category ]
+                            );
                         });
-                    },
-                    clear = function() {
-                        gids= { app: [], sub: [], bundle: [], all: [] };
-                        $search_bar
-                            .val("")
-                            .data("uiAutocomplete").menu.element.hide();
-                    };
                 
+                /* search bar */
+                var searchEngine = $search_bar
+                        .magicSuggest({
+                            valueField: "name",
+                            minChars: 5,
+                            maxSelection: 20,
+                            sortDir: "asc", sortOrder: "name",
+                            strictSuggest: true,
+                            useCommaKey: true,
+                            useTabKey: true,
+                        });
+
+                        
+                $(searchEngine)
+                        .on({
+                            "keydown": function(e,m,v) {
+                                if(v.keyCode == 13) { //enter-key
+                                    process();
+                                }
+                            },
+                            "focus": function() {
+                                $.merge($search, $searchCategory).addClass("cb-search--focus");
+                            },
+                            "blur": function() {
+                                $.merge($search, $searchCategory).removeClass("cb-search--focus");
+                            }
+                        });
+                        
+                /* search icon */
+                $search_icon
+                        .on("click", process);
+
                 /* progress bar */
                 $search.progressbar({
                             classes: {"ui-progressbar-value":"cb-search__progressbar"},
                             value: false
                         })
-                        .css({"border":"0",
-                              "background":"transparent"})
-                        .find(".cb-search__progressbar").hide();
+                    .find(".cb-search__progressbar")
+                        .hide(); //init
 
-                /* search category */
-                var category = "app"; //default
-                $searchCategory
-                    .on("change", function() {
-                        category = this.value;
-                    });
-                    
-                /* search icon */
-                $search_icon
-                    .on("click", ()=>{ 
-                        process();
-                        clear();
-                    });
-                
-                /* search bar */
-                $search_bar
-                    .autocomplete({ /* Auto complete search */
-                        source : function(request, response) {
-                            if( category === "all") {
-                                var searchList = Object.assign( that.searchList["app"], that.searchList["sub"], that.searchList["bundle"] );
-                            } else {
-                                var searchList = that.searchList[ category ];
-                            }
-
-                            response( $.ui.autocomplete.filter(
-                                searchList, (request.term).split( /,\s*/ ).pop()
-                            ));
-                        },
-                        search : function() {
-                            let term = (this.value).split( /,\s*/ ).pop();
-                            if(term.length < 5) { // Search from 5 letters or more.
-                                return false;
-                            }
-                        },
-                        select : function(event, ui) {
-                            let terms = (this.value).split( /,\s*/ );
-                            terms.pop(), terms.push( ui.item.label ), terms.push("");
-                            this.value = terms.join(", ");
- 
-                            gids[ category ].push( ui.item.gid );
-                            return false;
-                        }
-                    })
-                    .on("keydown", function (key) {
-                        if(key.keyCode == 13) { //enter-key
-                            process();
-                            clear();
-                        }
-                    })
-                    .data("uiAutocomplete").close = function(e) {
-                        return false;
-                    };
-
-            })( this.element.find(".cb-search"), this.element.find("#cb-search__bar"), 
-                this.element.find("#cb-search__icon"), this.element.find("#cb-sel-style__select") );
+                return searchEngine;
+                        
+            })( that.element.find(".cb-search"), that.element.find("#cb-search__bar"), 
+                that.element.find("#cb-search__icon"), that.element.find("#cb-search__category") );            
             
                     
             /*------- Table focus release -------*/
@@ -242,6 +225,11 @@
             /*------- Copy to clipboard -------*/
             this.element.find("#cb-btn--copy-to-clip")
                     .on("click", function () {
+                        const $clone = (that.focused_table.length!==0)? that.focused_table.clone() 
+                                                                      : $.map(that.article.children(),each=>each.clone());
+                        $clone.find("*").addBack().removeClass();
+                        $clone.find("table").addBack("table").addClass("cb-table");
+                        $("body").append($clone);
                         ((elements) => {
                             let body = document.body, range, sel;
                             if (document.createRange && window.getSelection) {
@@ -262,9 +250,10 @@
                                 range.moveToElementText(el);
                                 range.select();
                             }
-                        })( (that.focused_table.length!==0)? that.focused_table : that.article.children() );
-                        console.info("Copy to clipboard");
+                        })( $clone );
                         document.execCommand("Copy");
+                        $clone.remove();
+                        console.info("Copied to clipboard");
                     });
 
 
@@ -484,7 +473,11 @@
                 this.searchList = localStorage["searchList"];
                 if(!this.searchList) {
                     const dataType = function(value) {
-                        return {label: value.name, gid: value.gid};
+                        if(value.name === undefined) {
+                            return {name: "untitle", gid: value.gid};
+                        }else {
+                            return {name: value.name, gid: value.gid};
+                        }
                     };
                     
                     this.searchList = { app: await idxDB.readAll("app",dataType),
@@ -496,6 +489,8 @@
                     this.searchList = JSON.parse(this.searchList);
                 }
                 
+                /* Insert initial data into the serach engine. */
+                this.searchEngine.setData(this.searchList["app"]);
             })
             .then(()=>console.info("preheat completed."))
             .catch(e=>console.warn(e));
