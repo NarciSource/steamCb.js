@@ -993,10 +993,11 @@
             _renderComboItems: function(items, isGrouped) {
                 var ref = this, html = '';
                 $.each(items, function(index, value) {
-                    var displayed = cfg.renderer !== null ? cfg.renderer.call(ref, value) : value[cfg.displayField];
+                    var classes = ['ms-res-item'];
+                    var displayed = cfg.renderer !== null ? cfg.renderer.call(ref, value, classes) : value[cfg.displayField];
                     var disabled = cfg.disabledField !== null && value[cfg.disabledField] === true;
                     var resultItemEl = $('<div/>', {
-                        'class': 'ms-res-item ' + (isGrouped ? 'ms-res-item-grouped ':'') +
+                        class: classes.join(" ") + (isGrouped ? 'ms-res-item-grouped ':'') +
                             (disabled ? 'ms-res-item-disabled ':'') +
                             (index % 2 === 1 && cfg.useZebraStyle === true ? 'ms-res-odd' : ''),
                         html: cfg.highlight === true ? self._highlightSuggestion(displayed) : displayed,
@@ -1022,33 +1023,36 @@
                 }
 
                 $.each(_selection, function(index, value){
-
+                    var classes = ["ms-sel-item"];
                     var selectedItemEl, delItemEl,
-                        selectedItemHtml = cfg.selectionRenderer !== null ? cfg.selectionRenderer.call(ref, value) : value[cfg.displayField];
+                        selectedItemHtml = cfg.selectionRenderer !== null ? cfg.selectionRenderer.call(ref, value, classes) : value[cfg.displayField];
 
                     var validCls = self._validateSingleItem(value[cfg.displayField]) ? '' : ' ms-sel-invalid';
 
                     // tag representing selected value
                     if(asText === true) {
+                        classes.push("ms-sel-text");
                         selectedItemEl = $('<div/>', {
-                            'class': 'ms-sel-item ms-sel-text ' + cfg.selectionCls + validCls,
+                            class: classes.join(" ") + cfg.selectionCls + validCls,
                             html: selectedItemHtml + (index === (_selection.length - 1) ? '' : cfg.resultAsStringDelimiter)
                         }).data('json', value);
                     }
                     else {
                         selectedItemEl = $('<div/>', {
-                            'class': 'ms-sel-item ' + cfg.selectionCls + validCls,
-                            html: selectedItemHtml
+                            class: classes.join(" ") + cfg.selectionCls + validCls,
+                            html: $.merge(
+                                (cfg.disabled === true)?
+                                    $(/*empty*/)
+                                  : $('<x/>', {
+                                        class: 'ms-close-btn',
+                                        data: {json: value},
+                                        on: {click: $.proxy(handlers._onTagTriggerClick, ref)}
+                                    }),
+                                $('<span/>', {
+                                    html: selectedItemHtml
+                                })
+                            )
                         }).data('json', value);
-
-                        if(cfg.disabled === false){
-                            // small cross img
-                            delItemEl = $('<span/>', {
-                                'class': 'ms-close-btn'
-                            }).data('json', value).appendTo(selectedItemEl);
-
-                            delItemEl.on('click', $.proxy(handlers._onTagTriggerClick, ref));
-                        }
                     }
 
                     items.push(selectedItemEl);

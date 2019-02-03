@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.4.5 - 2019-02-03
+ * steamCb - v0.4.6 - 2019-02-04
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
@@ -15,7 +15,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.5",
+        version: "0.4.6",
         options: {
             idTag: "defaultCb",
             theme: ".default",
@@ -67,7 +67,17 @@
         },
 
         _setEvent: function() {
-            const that = this; //To keep the scope within the callback
+            const that = this, //To keep the scope within the callback
+                  KEYCODES = {
+                    BACKSPACE: 8,
+                    TAB: 9,
+                    ENTER: 13,
+                    CTRL: 17,
+                    ESC: 27,
+                    SPACE: 32,
+                    DELETE: 46,
+                    COMMA: 188
+                  };
 
             /*------- Search bar -------*/
             this.searchEngine = (function ($search, $search_bar, $search_icon, $searchCategory) {
@@ -95,26 +105,36 @@
                 var searchEngine = $search_bar
                         .magicSuggest({
                             valueField: "name",
-                            minChars: 5,
+                            minChars: 3,
                             maxSelection: 20,
                             sortDir: "asc", sortOrder: "name",
-                            strictSuggest: true,
+                            strictSuggest: false,
                             useCommaKey: true,
                             useTabKey: true,
+                            selectionRenderer: (data, classes)=> {
+                                if(data.gid === undefined && $.isNumeric(data.name)) {
+                                    classes.push("ms-sel-item--fast");
+                                }else if(data.gid === undefined) {
+                                    classes.push("ms-sel-item--free");
+                                }else {
+                                    classes.push("ms-sel-item--info");
+                                }
+                                return data.name;
+                            }
                         });
 
                         
                 $(searchEngine)
                         .on({
-                            "keydown": function(e,m,v) {
-                                if(v.keyCode == 13) { //enter-key
+                            keydown: function(e,m,v) {
+                                if(v.keyCode == KEYCODES.ENTER) {
                                     process();
                                 }
                             },
-                            "focus": function() {
+                            focus: function() {
                                 $.merge($search, $searchCategory).addClass("cb-search--focus");
                             },
-                            "blur": function() {
+                            blur: function() {
                                 $.merge($search, $searchCategory).removeClass("cb-search--focus");
                             }
                         });
@@ -140,9 +160,17 @@
             /*------- Table focus release -------*/
             this.article
                     .attr("tabindex",0)
-                    .focus(function() {
-                        that.focused_table.toggleClass("cb-tablehighlight");
-                        that.focused_table = $(/*null*/);//release
+                    .on({
+                        focus: function() {
+                            that.focused_table.toggleClass("cb-tablehighlight");
+                            that.focused_table = $(/*null*/);//release
+                        },
+                        keyup: function(event) {
+                            if(event.which === KEYCODES.DELETE) {
+                                that.focused_table.remove();
+                                that.focused_table = $(/*null*/);//release
+                            }
+                        }
                     });
 
             /*------- Add a table -------*/
@@ -688,6 +716,13 @@
                     
                     return $record[0];
                 });
+
+                /* delete by row */
+                $("<x/>",{
+                    click: function() {
+                        $(this).parent("tr").remove();
+                    }
+                }).appendTo(records);
 
                 /* engrave style */
                 $(records).find("td")
