@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.4.7 - 2019-02-05
+ * steamCb - v0.4.8 - 2019-02-06
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
@@ -16,7 +16,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.7",
+        version: "0.4.8",
         options: {
             idTag: "defaultCb",
             theme: ".default",
@@ -230,13 +230,6 @@
             })(this.element.find("#cb-btn--show"), this.article);
 
 
-            /*------- Erase -------*/
-            this.element.find("#cb-btn--delete")
-                    .on("click", function() { 
-                        that.article.children().remove();
-                        sessionStorage[`${that.options.idTag}-commands`] = [];
-                        console.info("Erase"); });    
-            
             /*------- Erase the trashbox -------*/
             this.element.find(".cb-trashbox").find("tr.cb-sortable-disabled")
                     .on("click", function() { 
@@ -310,9 +303,10 @@
                         }
                     },
                     items: {
-                        copy: {name: "Copy all to clipboard", icon: 'fa-clipboard'},
                         addTable: {name: "Add table", icon: 'fa-table'},
-                        delete: {name: "Clear", icon: 'fa-trash-o'}
+                        step1: "---------",
+                        delete: {name: "Clear", icon: 'fa-trash-o'},
+                        copy: {name: "Copy all to clipboard", icon: 'fa-clipboard'}
                     }
                 })
                 .contextMenu({
@@ -337,9 +331,10 @@
                         }
                     },
                     items: {
-                        copy: {name: "Copy to clipboard", icon: 'fa-clipboard'},
                         delete: {name: "Delete the table", icon: 'fa-trash-o'},
-                        adjustment: {name: "Theme adjustment", icon: 'fa-pencil-square-o'}
+                        step1: "---------",
+                        adjustment: {name: "Theme adjustment", icon: 'fa-pencil-square-o'},
+                        copy: {name: "Copy to clipboard", icon: 'fa-clipboard'}
                     }
                 })
                 .contextMenu({
@@ -359,6 +354,7 @@
                     },
                     items: {
                         delete: {name: "Delete the record", icon: 'fa-trash-o'},
+                        step1: "---------",
                         adjustment: {name: "Theme adjustment", icon: 'fa-pencil-square-o'}
                     }
                 });
@@ -531,20 +527,23 @@
 
 
             /*------- Record $article's contents in sessionStorage -------*/
-            (function ($article, $trashbox) {
-                var contents_recording = function() {
-                        that.commands = [];
-                        $article.find("table.cb-table").each((_, table) => {
-                            that.commands.push("table");
-                            $(table).find("tbody tr").each((_, tr) =>
-                                that.commands.push($(tr).attr("name")) );
-                        });
-                        sessionStorage[`${that.options.idTag}-commands`] = JSON.stringify(that.commands);
-                    };
-                $article.on("DOMNodeInserted", contents_recording);
-                $trashbox.on("DOMNodeInserted", contents_recording);
-
-            })(this.article, this.element.find(".cb-trashbox"));
+            let observer = new MutationObserver(function(mutations) {
+                    that.commands = [];
+                    that.article.find("table.cb-table").each((_, table) => {
+                        that.commands.push("table");
+                        $(table).find("tbody tr").each((_, tr) =>
+                            that.commands.push($(tr).attr("name")) );
+                    });
+                    sessionStorage[`${that.options.idTag}-commands`] = JSON.stringify(that.commands);
+                    
+                    //mutations.forEach(function(mutation) {
+                    //  console.log(mutation);
+                    //});
+            });
+            $.fn.observe = function(option) {
+                observer.observe(this.get(0), option || {childList: true});
+            };
+            this.article.observe({childList: true, subtree: true});
         },
 
         _preheat: function() {
