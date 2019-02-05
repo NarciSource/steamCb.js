@@ -7,6 +7,7 @@
 
     border-collapse: collapse;
 
+    color: inherit;
     text-shadow: 1px 1px rgba(255,255,255,.94);
 }
 .default thead,
@@ -93,15 +94,12 @@
 .xmas th {
     border: 1px solid #fff;
 }
-.xmas tbody {
-    color: #fff;
-}
 .xmas td {
     border: 1px solid #fff;
     background-color: #be3e3f;
 }
 .xmas a {
-    color: #fff !important;
+    color: inherit !important;
 }
 
 

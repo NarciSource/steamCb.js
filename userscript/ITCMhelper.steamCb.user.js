@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.17
+// @version      0.1.18
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.1/js/jquery.tablesorter.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.8.0/jquery.contextMenu.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/vendor/require.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/vendor/magicsuggest.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js
@@ -20,6 +21,7 @@
 // @resource     cb-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/cb.default.css
 // @resource     table-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/table.default.css
 // @resource     ts-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/tablesorter.css
+// @resource     cm-style https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.8.0/jquery.contextMenu.css
 // @resource     ms-style https://cdnjs.cloudflare.com/ajax/libs/magicsuggest/2.1.4/magicsuggest-min.css
 // @resource     exchange-api http://earthquake.kr/exchange/
 // @updateURL    https://raw.githubusercontent.com/NarciSource/steamCb.js/master/userscript/ITCMhelper.steamCb.meta.js
@@ -86,9 +88,10 @@ $(".tablesorter").tablesorter({
         return $(node).find("span").text().replace("%","");
     },
     textSorter : {
-        1 : function(a, b) {
-            const refa = Number(a.match(/\d+/g).join("")),
-                  refb = Number(b.match(/\d+/g).join(""));
+        "[name='ratings']" : function(a, b) {
+            const regx = /^[\w\s]+\((\d+)\)/,
+                  refa = a==="-1"? -1 : regx.exec(a)[1] ,
+                  refb = b==="-1"? -1 : regx.exec(b)[1] ;
             return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
         }
     }
@@ -135,6 +138,7 @@ const addStyle = async function(resource_url) {
 };
 addStyle("cb-style");
 addStyle("ts-style");
+addStyle("cm-style");
 addStyle("ms-style");
 
 

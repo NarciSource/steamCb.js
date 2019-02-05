@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.4.6 - 2019-02-04
+ * steamCb - v0.4.7 - 2019-02-05
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
@@ -7,6 +7,7 @@
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
  * @requires fontawesome v4.7.0 (https://fontawesome.com/v4.7.0/)
  * @requires magicsuggest v2.1.4 (http://nicolasbize.com/magicsuggest/doc.html)
+ * @requires contextMenu v2.8.0 (https://swisnl.github.io/jQuery-contextMenu/docs.html)
  * 
  * https://github.com/NarciSource/steamCb.js
  * Copyright 2018-2019. Narci. all rights reserved.
@@ -15,7 +16,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.6",
+        version: "0.4.7",
         options: {
             idTag: "defaultCb",
             theme: ".default",
@@ -173,12 +174,6 @@
                         }
                     });
 
-            /*------- Add a table -------*/
-            this.element.find("#cb-btn--add-table")
-                    .on("click", function() { 
-                        that.addTable(); 
-                    });
-
 
             /*------- Parses classes from the stylesSheet. -------*/
             (function(styleSheet, $select) {
@@ -250,42 +245,123 @@
                         console.info("Erase"); });
 
 
+            
+            
             /*------- Copy to clipboard -------*/
-            this.element.find("#cb-btn--copy-to-clip")
-                    .on("click", function () {
-                        const $clone = (that.focused_table.length!==0)? that.focused_table.clone() 
-                                                                      : $.map(that.article.children(),each=>each.clone());
-                        $clone.find("*").addBack().removeClass();
-                        $clone.find("table").addBack("table").addClass("cb-table");
-                        $("body").append($clone);
-                        ((elements) => {
-                            let body = document.body, range, sel;
-                            if (document.createRange && window.getSelection) {
-                                sel = window.getSelection();
-                                sel.removeAllRanges();
-                                elements.each((_, el)=> {
-                                    range = document.createRange();
-                                    try {
-                                        range.selectNodeContents(el);
-                                    } catch (e) {
-                                        range.selectNode(el);
-                                    } finally {
-                                        sel.addRange(range);
-                                    }
-                                });
-                            } else if (body.createTextRange) {
-                                range = body.createTextRange();
-                                range.moveToElementText(el);
-                                range.select();
-                            }
-                        })( $clone );
-                        document.execCommand("Copy");
-                        $clone.remove();
-                        console.info("Copied to clipboard");
+            $.fn.copyToClipboard = function() {
+                if (!$.contains(document, this)) {
+                    var isNotContain = true;
+                    this.each((_, el)=> $("body").append(el));
+                }
+
+                let body = document.body, range, sel;
+                if (document.createRange && window.getSelection) {
+                    sel = window.getSelection();
+                    sel.removeAllRanges();
+                    this.each((_, el)=> {
+                        range = document.createRange();
+                        try {
+                            range.selectNodeContents(el);
+                        } catch (e) {
+                            range.selectNode(el);
+                        } finally {
+                            sel.addRange(range);
+                        }
                     });
+                } else if (body.createTextRange) {
+                    range = body.createTextRange();
+                    range.moveToElementText(el);
+                    range.select();
+                }
+                document.execCommand("Copy");
+                console.info("Copied to clipboard");
+
+                if(isNotContain) {
+                    this.each((_,element)=>element.remove());
+                }
+                return this;
+            };
+            $.fn.tableDirtRemoval = function() {
+                this.find("*").addBack().removeClass();
+                this.find("table").addBack("table").addClass("cb-table");
+                return this;
+            };
 
 
-        
+
+            /*------- Add context menu to table -------*/
+            this.element
+                .contextMenu({
+                    selector: ".cb-article",
+                    callback: function(key, options) {
+                        switch(key) {
+                            case "copy":
+                                this.children().map((_,each)=> $(each).clone().get())
+                                    .tableDirtRemoval()
+                                    .copyToClipboard();
+                                break;
+                            case "addTable":
+                                that.addTable();
+                                break;
+                            case "delete":
+                                $(this).children().remove();
+                                this.focused_table = $(/*null*/); 
+                                break;
+                        }
+                    },
+                    items: {
+                        copy: {name: "Copy all to clipboard", icon: 'fa-clipboard'},
+                        addTable: {name: "Add table", icon: 'fa-table'},
+                        delete: {name: "Clear", icon: 'fa-trash-o'}
+                    }
+                })
+                .contextMenu({
+                    selector: ".cb-table > thead",
+                    callback: function(key, options) {
+                        switch(key) {
+                            case "copy": 
+                                $(this).parent("table").clone()
+                                    .tableDirtRemoval()
+                                    .copyToClipboard();
+                                break;
+                            case "delete":
+                                $(this).parent("table").remove();
+                                this.focused_table = $(/*null*/); 
+                                break;
+                            case "adjustment":
+                                $(this).parent("table").engraveStyle({
+                                    styleSheet: that.options.style, 
+                                    classFilter: that.options.theme
+                                });
+                                break;
+                        }
+                    },
+                    items: {
+                        copy: {name: "Copy to clipboard", icon: 'fa-clipboard'},
+                        delete: {name: "Delete the table", icon: 'fa-trash-o'},
+                        adjustment: {name: "Theme adjustment", icon: 'fa-pencil-square-o'}
+                    }
+                })
+                .contextMenu({
+                    selector: ".cb-table > tbody > tr",
+                    callback: function(key, options) {
+                        switch(key) {
+                            case "delete":
+                                $(this).remove();
+                                break;
+                            case "adjustment":
+                                $(this).engraveStyle({
+                                    styleSheet: that.options.style, 
+                                    classFilter: that.options.theme
+                                });
+                                break;
+                        }
+                    },
+                    items: {
+                        delete: {name: "Delete the record", icon: 'fa-trash-o'},
+                        adjustment: {name: "Theme adjustment", icon: 'fa-pencil-square-o'}
+                    }
+                });
 
 
             /*------- Setting tab -------*/
@@ -554,6 +630,10 @@
                         "ui-dialog-titlebar-close":"cb-dialog-titlebar-close"
                     },
                     open: function(event, ui) {
+                        $(this).parent().find(".cb-dialog-titlebar")
+                            .append($("<i>", {
+                                class: "fa fa-steam cb-dialog-titlebar__steam-icon"
+                            }));
                         $(this).parent().find(".ui-icon-closethick").switchClass("ui-icon ui-icon-closethick","cb-icon-closethick fa fa-times",0);
                     },
                     resizeStop: function() {
@@ -714,15 +794,8 @@
                                                         text: "$"+ginfo.retail_price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}) });
                         }})(ginfo.retail_price));
                     
-                    return $record[0];
+                    return $record.get();
                 });
-
-                /* delete by row */
-                $("<x/>",{
-                    click: function() {
-                        $(this).parent("tr").remove();
-                    }
-                }).appendTo(records);
 
                 /* engrave style */
                 $(records).find("td")

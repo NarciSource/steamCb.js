@@ -18,6 +18,9 @@
 
     display: flex;
 
+    width:         fill-available;
+    width:         -moz-available;
+    width: -webkit-fill-available;
     height: 25px;
     margin: 0;
 }
@@ -43,7 +46,8 @@
 .cb-toolbox {
     display: flex;
 
-    margin-left: auto;
+    width: max-content;
+    margin: 10px;
 
     justify-content: center;
     align-items: center;
@@ -169,7 +173,9 @@
 .cb-search {
     display: flex;
 
-    width: 80%;
+    width:         fill-available;
+    width:         -moz-available;
+    width: -webkit-fill-available;
     height: 25px;
 
     border: solid #d2d6e0;
@@ -398,7 +404,10 @@
 
 /*----- cb-setting -----*/
 .cb-setting__article {
+    overflow: auto;
+
     width: 100%;
+    height: calc(100% - 100px);
 }
 .cb-setting__progressbar {
     width: 70%;
@@ -459,12 +468,18 @@ i#cb-btn--reset:hover {
 
     align-items: center;
 }
+.cb-dialog-titlebar__steam-icon {
+    font-size: 30px;
+
+    color: white;
+}
 .cb-dialog-title {
     font-size: 2em;
 
-    margin: 0 25px !important;
+    width: auto !important;
+    margin: 0 0 0 25px !important;
 
-    color: #fff;
+    color: white;
 }
 .cb-dialog-titlebar-close {
     top: 0 !important;
@@ -483,13 +498,13 @@ i#cb-btn--reset:hover {
 }
 .cb-dialog-titlebar-close:hover .cb-icon-closethick {
     opacity: 1.0;
-    color: #fff;
+    color: white;
 }
 .cb-icon-closethick {
     font-size: 20px;
 
     opacity: .5;
-    color: #fff;
+    color: white;
 }
 
 /*----- custom ui-dialog--alert -----*/
@@ -509,7 +524,7 @@ i#cb-btn--reset:hover {
 
     margin: 0 25px !important;
 
-    color: #fff;
+    color: white;
     text-shadow: 1px 1px 1px rgba(0,0,0,.2);
 }
 .cb-dialog-content--alert {
