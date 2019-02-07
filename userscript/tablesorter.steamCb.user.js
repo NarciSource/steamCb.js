@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         tablesorter.steamCb
 // @namespace    steamCb
-// @version      0.1.1
+// @version      0.1.2
 // @description  Apply the tablesorter effect to the cb-table
 // @author       narci <jwch11@gmail.com>
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
@@ -30,13 +30,13 @@ addStyle("ts-style");
 
 
 // Apply the tablesorter effect to the cb-table.
-$(".tablesorter").tablesorter({
+$(".cb-table").tablesorter({
     textExtraction : function(node) {
-        if($(node).find("span").text() === "?") return -1;
-        return $(node).find("span").text().replace("%","");
+        if($(node).find('a').text() === "?" || $(node).find('a').text() === "-") return -1;
+        return $(node).find('a').text().replace("%","");
     },
     textSorter : {
-        "[name='ratings']" : function(a, b) {
+        '[name="ratings"]' : function(a, b) {
             const regx = /^[\w\s]+\((\d+)\)/,
                   refa = a==="-1"? -1 : regx.exec(a)[1] ,
                   refb = b==="-1"? -1 : regx.exec(b)[1] ;

@@ -1,5 +1,5 @@
 /**
- * GinfoBuilder - v0.2.5 - 2018-01-15
+ * GinfoBuilder - v0.2.6 - 2018-02-07
  * https://github.com/NarciSource/ginfoBuilder.js
  * Copyright 2018-2019. Narci. all rights reserved.
  * Licensed under the MIT license
@@ -16,48 +16,53 @@ GinfoBuilder = (function() {
      *  @classdesc   The type of data to send to user. */
     class Ginfo {
         constructor(gdata) {
-            this.name = "?";
-            this.gid = "?";
-            this.plain = "?";
-            this.reviews_perc = "?";
-            this.reviews_text = "?";
-            this.trading_cards = "?";
-            this.achievements = "?";
-            this.retail_price = "?";
-            this.lowest_price = "?";
-            this.bundles = "?";
-            this.reviews = "?";
-            this.is_dlc = "?";
-            this.is_package = "?";
+            const defaults = {
+                id : undefined,
+                div : undefined,
+                name : undefined,
+                plain : undefined,
 
-            Object.assign(this, gdata);
+                retail_price : undefined,
+
+                trading_cards : undefined,
+                achievements : undefined,
+                
+                is_dlc : undefined,
+                is_package : undefined,
+                is_early_access : undefined,
+
+                reviews : undefined,
+                bundles : undefined,
+                lowest_price : undefined,
+                store_price : undefined,
+
+                urls: undefined
+            };
+            Object.assign(this, defaults, gdata);
         }
-        get url_store() {
-            return `https://store.steampowered.com/app/${this.gid}`; }
-        get url_cards() {
-            return `https://www.steamcardexchange.net/index.php?gamepage-appid-${this.gid}`; }
-        get url_archv() {
-            return `https://astats.astats.nl/astats/Steam_Game_Info.php?AppID=${this.gid}`; }
-        set url_price_info(url) {
-            this._url_price_info = url; }
-        get url_price_info() {
-            return this._url_price_info || "#"; }
-        set url_history(url) {
-            this._url_history = url; }
-        get url_history() {
-            return this._url_history || "#"; }
-        set url_bundles(url) {
-            this._url_bundles=url; }
-        get url_bundles() {
-            return this._url_bundles || "#"; }
+
+        get urls_store() {
+            return `https://store.steampowered.com/${this.div}/${this.id}`; }
+        get urls_cards() {
+            return `https://www.steamcardexchange.net/index.php?gamepage-appid-${this.id}`; }
+        get urls_archv() {
+            return `https://astats.astats.nl/astats/Steam_Game_Info.php?AppID=${this.id}`; }
+        get urls_img() {
+            if (this.div === "app" || this.div === "sub") {
+                return `https://steamcdn-a.akamaihd.net/steam/${this.div}s/${this.id}/capsule_184x69.jpg`; 
+            } else {
+                return `https://steamstore-a.akamaihd.net/public/shared/images/header/globalheader_logo.png`;
+            }
+        }
     }
 
 
     /**
-     * @typedef {number[]} gids
-     * @typedef {{name:string, plain:string}} gdata
+     * @typedef {{id:number, div:string}} gid
+     * @typedef {gid[]} gids
+     * @typedef {{id:number, div:string, name:string, plain:string}} gdata
      * @typedef {gdata[]} glist
-     * @typedef {{name:string, plain:string, achievements:boolean}} ginfoEX
+     * @typedef {{...gdata:gdata, etc:any}} ginfoEX
      * @typedef {ginfoEX[]} glistEX
      */
         
@@ -104,13 +109,14 @@ GinfoBuilder = (function() {
     /** @type {glistEX} */
     var cache = {
             get: function(gid) {
-                return JSON.parse(sessionStorage.getItem(gid));
+                return JSON.parse(sessionStorage.getItem(gid.div+"/"+gid.id));
             },
-            set: function(glist) {
-                glist.forEach(gdata => 
-                    sessionStorage.setItem(gdata.gid, JSON.stringify(gdata)));
+            set: function(glistEX) {
+                glistEX.forEach(ginfo => 
+                    sessionStorage.setItem(ginfo.div+"/"+ginfo.id, JSON.stringify(ginfo)));
                 return this;
-            }};
+            }
+        };
 
 
     /** @function    initLoad (async)
@@ -145,23 +151,26 @@ GinfoBuilder = (function() {
             steamlist[app.appid] = app.name;
         });
 
-        var applist = Object.keys(plainlist.data.steam).filter(gid=>/^app/.test(gid)).map(gid=> ({
-                gid : gid.replace(/^app\//,""),
-                plain : plainlist.data.steam[gid],
-                name : steamlist[gid.replace(/^app\//,"")] }) ),
-            sublist = Object.keys(plainlist.data.steam).filter(gid=>/^sub/.test(gid)).map(gid=> ({
-                gid : gid.replace(/^sub\//,""),
-                plain : plainlist.data.steam[gid] }) ),
-            bundlelist = Object.keys(plainlist.data.steam).filter(gid=>/^bundle/.test(gid)).map(gid=> ({
-                gid : gid.replace(/^bundle\//,""),
-                plain : plainlist.data.steam[gid] }) );
+        var applist = Object.keys(plainlist.data.steam).filter(id=>/^app/.test(id)).map(id=> ({
+                id : id.replace(/^app\//,""),
+                div : "app",
+                plain : plainlist.data.steam[id],
+                name : steamlist[id.replace(/^app\//,"")] }) ),
+            sublist = Object.keys(plainlist.data.steam).filter(id=>/^sub/.test(id)).map(id=> ({
+                id : id.replace(/^sub\//,""),
+                div : "sub",
+                plain : plainlist.data.steam[id] }) ),
+            bundlelist = Object.keys(plainlist.data.steam).filter(id=>/^bundle/.test(id)).map(id=> ({
+                id : id.replace(/^bundle\//,""),
+                div : "bundle",
+                plain : plainlist.data.steam[id] }) );
                 
         return [applist, sublist, bundlelist];
     };
 
     /** @function    loadBase (async)
      *  @description Check whether there is data in db, and if not, load it.
-     *  @return      {Promise<boolean>} */
+     *  @return      {boolean} */
     async function loadBase() {
         if( !await idxDB.isEmpty() ) {
             return true;
@@ -180,18 +189,24 @@ GinfoBuilder = (function() {
     /** @function    gidSelector (async)
      *  @description Select gids that are no errors and needs to be updated.
      *  @param       {gids} rqst_gids   Gids requested by the user.
-     *  @return      {Promise<glist>} */
-    async function gidSelector(category, rqst_gids) {
-        const need_gids = rqst_gids.filter(gid => !cache.get(gid)),
-              glist = await idxDB.read(category, need_gids),
-              recycle = rqst_gids.filter(gid=>cache.get(gid)),
-              load = glist.map(gdata=>gdata.gid),
-              error = rqst_gids.filter(gid=> recycle.indexOf(gid)===-1)
-                                .filter(gid=> load.indexOf(gid)===-1);
-        
-        console.info(`(${category}) load: ${load} / recycle: ${recycle} / error: ${error}`);
-                        
-        return glist;
+     *  @return      {glist} */
+    async function gidSelector(rqst_gids) {
+        const promises= ["app","sub","bundle"].map(async div=> {
+            const whole = rqst_gids.filter(gid=>gid.div===div).map(gid=>gid.id),
+                  needs = whole.filter(id=>!cache.get({div,id})); //needs = whole not in cache
+
+                  glist = await idxDB.read(div, needs);
+
+                  load = glist.map(gdata=>gdata.id), //load = needs in db
+                  recycle = whole.filter(id=>!needs.includes(id)), //recycle = whole - needs
+                  error = needs.filter(id=>!load.includes(id)); //error = needs - load
+
+            if (load.length + recycle.length + error.length > 0) {
+                console.info(`(${div}) load: ${load} / recycle: ${recycle} / error: ${error}`);
+            }
+            return glist;
+        });
+        return (await Promise.all(promises)).flat();
     };
 
 
@@ -200,64 +215,62 @@ GinfoBuilder = (function() {
      *  @param       {glist} glist Base data
      *  @return      {glistEX} Expanded data */
     async function loadMore(glist) {
-        if(glist.length!==0) {
-            const plains = glist.map(gdata => gdata.plain);
+        if(glist.length) {
+            const plains = glist.map(gdata => gdata.plain),
 
-            /* combine promise */
-            const promises = [getITADPrice(plains.join()), //1)crrent price
+                  /* combine promise */
+                  promises = [getITADPrice(plains.join()), //1)crrent price
                               getITADInfo(plains.join()), //2)additional information
-                              getITADLowest(plains.join()), //3)lowest price
-                              getITADBundles(plains.join())].map(promise =>  //4)number of bundles
+                              getITADOverview(plains.join())].map(promise =>  //4)number of bundles
                                     promise.then(d => ({success: true, d}), 
                                                 err => ({success: false, err})));
             /* load infomation */
-            const [res_price, res_info, res_lowest, res_bundles] = await Promise.all(promises);
+            const [res_price, res_info, res_overview] = await Promise.all(promises);
 
-            glist.forEach(gdata => {
+            glist = glist.map(gdata => {
                 const plain = gdata.plain;
 
                 try {
                     if(res_price.success) {
-                        gdata.retail_price = res_price.d.data[plain].list[0].price_new;
-                    } else throw "";
+                        Object.assign( gdata, {
+                            retail_price : res_price.d.data[plain].list[0].price_old
+                        });
+                    } else throw res_price.err;
                 }catch(e) {
-                    console.warn(gdata.gid + " Can not read the price information.");
+                    console.warn(gdata.div +"/"+ gdata.id + " Can not read the price information.");
                 }
 
                 try {
                     if(res_info.success) {
-                        gdata.trading_cards = res_info.d.data[plain].trading_cards;
-                        gdata.achievements = res_info.d.data[plain].achievements;
-                        gdata.url_price_info = res_info.d.data[plain].urls.game;
-                        gdata.reviews_perc = res_info.d.data[plain].reviews.steam.perc_positive;
-                        gdata.reviews_text = res_info.d.data[plain].reviews.steam.text;
-                        gdata.is_dlc = res_info.d.data[plain].is_dlc;
-                        gdata.is_package = res_info.d.data[plain].is_package;
-                    } else throw "";
+                        Object.assign( gdata, {
+                            trading_cards : res_info.d.data[plain].trading_cards,
+                            achievements : res_info.d.data[plain].achievements,
+                            reviews : res_info.d.data[plain].reviews,
+                            is_dlc : res_info.d.data[plain].is_dlc,
+                            is_package : res_info.d.data[plain].is_package,
+                            is_early_access : res_info.d.data[plain].early_access
+                        });
+                    } else throw res_info.err;
                 }catch(e) {
-                    console.warn(gdata.gid + " Can not read the trading cards and achievemts informaion.");
+                    console.warn(gdata.div +"/"+ gdata.id + " Can not read the trading cards and achievemts informaion.");
                 }
 
                 try {
-                    if(res_lowest.success) {
-                        gdata.lowest_price = res_lowest.d.data[plain].price;
-                        gdata.url_history = res_lowest.d.data[plain].urls.history;
-                    } else throw "";
+                    if(res_overview.success) {
+                        Object.assign( gdata, {
+                            lowest_price : res_overview.d.data[plain].lowest,
+                            store_price : res_overview.d.data[plain].price,
+                            bundles : res_overview.d.data[plain].bundles,
+                            urls : res_overview.d.data[plain].urls
+                        });
+                    } else throw res_overview.err;
                 }catch(e) {
-                    console.warn(gdata.gid + " Can not read the lowest price information.");
+                    console.warn(gdata.div +"/"+ gdata.id + " Can not read the overview informaion.");
                 }
 
-                try {
-                    if(res_bundles.success) {
-                        gdata.bundles = res_bundles.d.data[plain].total;
-                        gdata.url_bundles = res_bundles.d.data[plain].urls.bundles;
-                    } else throw "";
-                }catch(e) {
-                    console.warn(gdata.gid + " Can not read the number of bundles information.");
-                }                               
+                return gdata;
             });
         }
-
         return glist;
     };
      
@@ -265,7 +278,7 @@ GinfoBuilder = (function() {
     /** @function    dataProcessing
      *  @description Process the data into informaion
      *  @param       {glistEX} glist
-     *  @return      {ginfolist} ginfo list */
+     *  @return      {Ginfo[]} ginfo list */
     function dataProcessing(glist) {
         return ginfolist = glist.map(gdata => new Ginfo(gdata) ); //covered
     }
@@ -288,9 +301,9 @@ GinfoBuilder = (function() {
          *  @description Build information based on the request gids.
          *  @param       {gids} rqst_gids   Request gids.
          *  @return      {Promise<ginfolist>} Returns collected information.*/
-        build : async function(category, rqst_gids) {
+        build : async function(rqst_gids) {
             await   loadBase();
-            return  gidSelector(category, rqst_gids).then(selcted_glist => 
+            return  gidSelector(rqst_gids).then(selcted_glist => 
                     loadMore(selcted_glist)).then(extend_glist => 
                     cache.set(extend_glist)).then(cache =>
                     resultSelector(rqst_gids,cache)).then(result_glist =>
@@ -314,7 +327,6 @@ GinfoBuilder = (function() {
             cache.clear();
         }
     };
-
 })();
 
 
@@ -336,8 +348,8 @@ var idxDB = (function() {
 
     var db;
     const dbName = "ginfoDB",
-          version = 2,
-          primaryKey = "gid",
+          version = 3,
+          primaryKey = "id",
           defaultTable = "app",
           table = ["app","dlc","sub","bundle"];
     //const candidateKey = "plain";
@@ -356,7 +368,13 @@ var idxDB = (function() {
                 }
                 request.onupgradeneeded = function(res) { // upgrade.then=>success
                     db = res.target.result;
-                    console.info("request upgrade");
+                    console.info("request upgrade", res.oldVersion);
+
+                    if (res.oldVersion < version) {
+                        table.forEach(each=> db.deleteObjectStore(each));
+                        localStorage.clear();
+                        sessionStorage.clear();
+                    }
                     
                     table.forEach(each=>
                         db.createObjectStore( each, {keyPath: primaryKey}));
@@ -390,7 +408,12 @@ var idxDB = (function() {
                 });
             });
         },
-        read: async function(table, gids) {
+        /** @function    read (async)
+         *  @description 
+         *  @param       {string} table
+         *  @param       {number[]} ids   
+         *  @return      {Promise<gdata>} */
+        read: async function(table, ids) {
             await loadDB();
             var objects = [];
 
@@ -406,8 +429,8 @@ var idxDB = (function() {
                     }
                 let objectStore = transaction.objectStore(table);
 
-                gids.forEach(gid => {
-                    var readRequest = objectStore.get(gid);
+                ids.forEach(id => {
+                    var readRequest = objectStore.get(id);
                     readRequest.onsuccess = function(event) {
                         if(event.target.result !== undefined) {
                             objects.push( event.target.result );
@@ -441,7 +464,7 @@ var idxDB = (function() {
                 }
             });
         },
-        isExist: async function(table, gids) {
+        isExist: async function(table, ids) {
             await loadDB();
             var exist = [],
                 notexist = [];
@@ -458,13 +481,13 @@ var idxDB = (function() {
                     }
                 let objectStore = transaction.objectStore(table);
 
-                gids.forEach(gid => {
-                    var readRequest = objectStore.get(gid);
+                ids.forEach(id => {
+                    var readRequest = objectStore.get(id);
                     readRequest.onsuccess = function(event) {
-                        exist.push( event.target.result.gid );
+                        exist.push( event.target.result.id );
                     };
                     readRequest.onerror = function(event) {
-                        notexist.push( event.target.result.gid );
+                        notexist.push( event.target.result.id );
                     }
                 });
             });

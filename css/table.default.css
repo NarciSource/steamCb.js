@@ -16,13 +16,15 @@
 }
 .default th,
 .default td {
+    position: relative;
+
     padding: 3px 10px;
 
     text-align: center;
 
     border: 1px solid gray;
 }
-.default th[name='game'] {
+.default th[name='title'] {
     width: auto;
 }
 .default th[name='retail'] {
@@ -31,17 +33,45 @@
 .default th[name='ratings'] {
     padding: 3px 35px;
 }
-.default td[name='game'] {
+.default td[name='title'] {
     text-align: left;
 }
-.default td[name='lowest'],
-.default td[name='retail'] {
+.default td[name='img'] {
+    padding: 0;
+}
+.default td[name='img'] div {
+    display: block;
+
+    width: 184px;
+    height: 69px;
+}
+.default td[name='img'] a {
+    font-size: 15px;
+
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+
+    display: none;
+
+    transform: translateX(-50%);
+
+    color: white;
+    text-shadow: 0 0 10px #000;
+}
+.default td[name='lowest'] a,
+.default td[name='retail'] a,
+.default td[name='current'] a {
     text-align: right;
 }
-.default td[name='lowest'] span,
-.default td[name='retail'] span {
+.default td[name='lowest'] a,
+.default td[name='retail'] a,
+.default td[name='lowest_detail'] a,
+.default td[name='lowest_detail'] div,
+.default td[name='current'] a {
     white-space: nowrap;
 }
+
 
 
 

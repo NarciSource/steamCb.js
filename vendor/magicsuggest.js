@@ -1144,13 +1144,21 @@
                 // sort the data
                 if(cfg.sortOrder !== null) {
                     newSuggestions.sort(function(a,b) {
-                        if(a[cfg.sortOrder] < b[cfg.sortOrder]) {
-                            return cfg.sortDir === 'asc' ? -1 : 1;
+                        if(a[cfg.sortOrder].toLowerCase().indexOf(q.toLowerCase()) < b[cfg.sortOrder].toLowerCase().indexOf(q.toLowerCase())) {
+                            return -1;
                         }
-                        if(a[cfg.sortOrder] > b[cfg.sortOrder]) {
-                            return cfg.sortDir === 'asc' ? 1 : -1;
+                        else if(a[cfg.sortOrder].toLowerCase().indexOf(q.toLowerCase()) > b[cfg.sortOrder].toLowerCase().indexOf(q.toLowerCase())) {
+                            return 1;
                         }
-                        return 0;
+                        else {
+                            if(a[cfg.sortOrder] < b[cfg.sortOrder]) {
+                                return cfg.sortDir === 'asc' ? -1 : 1;
+                            }
+                            if(a[cfg.sortOrder] > b[cfg.sortOrder]) {
+                                return cfg.sortDir === 'asc' ? 1 : -1;
+                            }
+                            return 0;
+                        }
                     });
                 }
                 // trim it down

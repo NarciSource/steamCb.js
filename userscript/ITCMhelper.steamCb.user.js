@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.18
+// @version      0.1.19
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
+// @icon         https://raw.githubusercontent.com/NarciSource/steamCb.js/master/icon/cb-icon.png
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.1/js/jquery.tablesorter.min.js
@@ -47,7 +48,7 @@ $.ajax = function(url, options) {
     if( /^blob:(\w+)/.test( options.url ) ) {
         return originAjax(url, options);
     }
-    console.info(options.type || "GET", options.url);
+    console.log(options.type || "GET", options.url);
 
     let dfd = $.Deferred();
 
@@ -82,10 +83,10 @@ $.ajax = function(url, options) {
 'use strict';
 
 // Apply the tablesorter effect to the cb-table.
-$(".tablesorter").tablesorter({
+$(".cb-table").tablesorter({
     textExtraction : function(node) {
-        if($(node).find("span").text() === "?") return -1;
-        return $(node).find("span").text().replace("%","");
+        if($(node).find("a").text() === "?") return -1;
+        return $(node).find("a").text().replace("%","");
     },
     textSorter : {
         "[name='ratings']" : function(a, b) {
@@ -152,8 +153,8 @@ addStyle("ms-style");
                     hyperlink : false,
                     style : await $.get(await GM.getResourceUrl("table-style")),
                     theme : ".itcm",
-                    field : {game: "Game", cards: "C", archvment: "A", bundles: "B", lowest: "Lowest"},
-                    record : {game: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?"} });
+                    field : {title: "Game", cards: "C", archvment: "A", bundles: "B", lowest: "Lowest"},
+                    record : {title: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?"} });
 
     $("div.column_login").after($side);
 })();
@@ -176,8 +177,8 @@ $("<li/>", {
                                         hyperlink : false,
                                         style : await $.get(await GM.getResourceUrl("table-style")),
                                         theme : ".eevee",
-                                        field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                        record : {game: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+                                        field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
+                                        record : {title: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                 }
 
             $applet.steamCb("popUp");
@@ -214,9 +215,11 @@ if( $("div.steam_read_selected").length) {
                         );
                     },
                     click: async function() {
-                        let gids = $(".steam_read_selected tbody .app > .item_image")
-                                    .map((_, item) => $(item).attr("href").replace("/index.php?mid=g_board&app=",""))
-                                    .toArray();
+                        let ids = $(".steam_read_selected .item_content a")
+                                    .map((idx, item) => {
+                                        const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr("href") );
+                                        return {div,id};
+                                    }).toArray();
                         
                         if(!$applet) {
                             $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
@@ -224,13 +227,13 @@ if( $("div.steam_read_selected").length) {
                                     .steamCb({  idTag : "cb-1",
                                                 style : await $.get(await GM.getResourceUrl("table-style")),
                                                 theme : ".eevee",
-                                                field : {game: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                                record : {game: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+                                                field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
+                                                record : {title: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                         }
         
                         $applet.steamCb("popUp")
                                 .steamCb("addTable")
-                                .steamCb("addGames", gids);
+                                .steamCb("addGames", ids);
                     }
                 } })
     }).insertBefore($("div.steam_read_selected"));

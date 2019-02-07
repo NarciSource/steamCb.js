@@ -263,8 +263,10 @@
 
     padding: 0 !important;
 
+    color: white !important;
     border: 0 !important;
 }
+
 .cb-search .ms-sel-item:hover span {
     box-shadow: 0 0 0 2px #7ac3ff inset;
 }
@@ -286,14 +288,22 @@
 
     box-shadow: 0 0 0 2px #d39494 inset;
 }
-.cb-search .ms-sel-item--info {
-    background: #dcebff !important;
+.cb-search .ms-sel-item--app {
+    background: #00afff !important;
+}
+.cb-search .ms-sel-item--sub {
+    background: #90d133 !important;
+}
+.cb-search .ms-sel-item--bundle {
+    background: #ffc000 !important;
 }
 .cb-search .ms-sel-item--fast {
-    background: #f0fff0 !important;
-}
-.cb-search .ms-sel-item--free {
+    color: #600 !important;
     background: #ffd9e4 !important;
+}
+.cb-search .ms-sel-item--fail {
+    color: #ddd !important;
+    background: #eee !important;
 }
 
 .cb-search .ms-trigger {
