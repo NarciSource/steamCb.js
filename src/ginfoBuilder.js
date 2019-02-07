@@ -227,7 +227,8 @@ GinfoBuilder = (function() {
             /* load infomation */
             const [res_price, res_info, res_overview] = await Promise.all(promises);
 
-            glist = glist.map(gdata => {
+            glist = glist.map(source => {
+                let gdata = JSON.parse(JSON.stringify(source));
                 const plain = gdata.plain;
 
                 try {
@@ -368,9 +369,9 @@ var idxDB = (function() {
                 }
                 request.onupgradeneeded = function(res) { // upgrade.then=>success
                     db = res.target.result;
-                    console.info("request upgrade", res.oldVersion);
+                    console.info("request upgrade");
 
-                    if (res.oldVersion < version) {
+                    if (1 < res.oldVersion && res.oldVersion < version) {
                         table.forEach(each=> db.deleteObjectStore(each));
                         localStorage.clear();
                         sessionStorage.clear();
