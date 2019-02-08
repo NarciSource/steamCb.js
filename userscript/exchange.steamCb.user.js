@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         exchange.steamCb
 // @namespace    steamCb
-// @version      0.1.0
+// @version      0.1.1
 // @description  Change the amount in cb-table at the current exchange rate.
 // @author       narci <jwch11@gmail.com>
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
@@ -19,18 +19,15 @@ this.$ = window.jQuery.noConflict(true);
 (async function() {
     try{
 
-    const nowDate = new Date();
-    nowDate.setHours(0, 0, 0, 0);
+    const date = new Date();    
+    date.setHours(0, 0, 0, 0);
 
     if( localStorage["exchange"]===undefined || 
-        nowDate > new Date(JSON.parse(localStorage["exchange"]).date) ) {
+        date > new Date(JSON.parse(localStorage["exchange"]).date) ) {
 
         const exchange = await $.get(await GM.getResourceUrl("exchange-api"));
 
-        localStorage["exchange"] = JSON.stringify({
-            date : nowDate,
-            exchange : exchange
-        });
+        localStorage["exchange"] = JSON.stringify({ date, exchange });
     }
 
 
@@ -38,9 +35,13 @@ this.$ = window.jQuery.noConflict(true);
     $(".cb-table td")
         .filter((_, item)=> item.innerText.includes("$"))
         .each((_, item)=> {
-            const changed = "₩"+( Number(item.innerText.substring(1)) * exchange.USDKRW[0] )
-                                    .toFixed(0).replace(/\d{2}\b/g, '00').replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
-            item.innerHTML = item.innerHTML.replace(item.innerText, changed);
+            let innerHTML = item.innerHTML,
+                [match, num] = /\$\s*(\d+\.\d+)/.exec(innerHTML);
+            num = (Number(num) * exchange.USDKRW[0])
+                    .toFixed(0)
+                    .replace(/\d{2}\b/g, '00')
+                    .replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
+            item.innerHTML = innerHTML.replace(/\$(\s*)\d+\.\d+/g, "₩$1"+num);
     });
 
     }catch(e) {

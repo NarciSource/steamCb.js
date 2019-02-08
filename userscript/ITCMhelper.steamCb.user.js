@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.19.1
+// @version      0.1.20
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -103,6 +103,8 @@ $(".cb-table").tablesorter({
     try{
 
     const date = new Date();    
+    date.setHours(0, 0, 0, 0);
+
     if( localStorage["exchange"]===undefined || 
         date > new Date(JSON.parse(localStorage["exchange"]).date) ) {
 
@@ -116,9 +118,13 @@ $(".cb-table").tablesorter({
     $(".cb-table td")
         .filter((_, item)=> item.innerText.includes("$"))
         .each((_, item)=> {
-            const changed = "₩"+( Number(item.innerText.substring(1)) * exchange.USDKRW[0] )
-                                    .toFixed(0).replace(/\d{2}\b/g, '00').replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
-            item.innerHTML = item.innerHTML.replace(item.innerText, changed);
+            let innerHTML = item.innerHTML,
+                [match, num] = /\$\s*(\d+\.\d+)/.exec(innerHTML);
+            num = (Number(num) * exchange.USDKRW[0])
+                    .toFixed(0)
+                    .replace(/\d{2}\b/g, '00')
+                    .replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
+            item.innerHTML = innerHTML.replace(/\$(\s*)\d+\.\d+/g, "₩$1"+num);
     });
 
     }catch(e) {
@@ -188,53 +194,58 @@ $("<li/>", {
 
 
 // Extract the game list of ITCM.
-if( $("div.steam_read_selected").length) {
+if( $('div.steam_read_selected').length) {
+    if( $('.itcm-game-toolbox').length === 0) {
+        $('<div>', {
+            class: 'itcm-game-toolbox',
+            css: {'display': 'flex',
+                  'position': 'absolute',
+                  'margin': '0px 0px 0px 735px',
+                  'padding': '5px 10px 3px 0px',
+                  'background': 'rgb(51, 51, 51)',
+                  'border-radius': '0px 20px 20px 0px' }
+        }).insertBefore($('div.steam_read_selected'));
+    }
+
     $("<div/>", {
-        css: {'position': 'absolute',
-              'margin': '0px 0px 0px 735px',
-              'background': 'rgb(51, 51, 51)',
-              'border-radius': '0px 20px 20px 0px' },
-        html: $("<div/>", {
-                class: 'fa fa-magic',
-                css: {'padding': '5px 15px 3px 10px',
-                      'color': 'white',
-                      'font-size': '15px',
-                      'line-height': '20px',
-                      'cursor': 'pointer' },
-                on: {
-                    mouseenter: function() {
-                        $(this).animate({ deg: 360 }, {
-                                    duration: 600,
-                                    step: function(now) {
-                                        $(this).css({ transform: `rotate(${now}deg)` });
-                                    },
-                                    complete: function() {
-                                        $(this)[0].deg=0;
-                                    }
-                                }
-                        );
-                    },
-                    click: async function() {
-                        let ids = $(".steam_read_selected .item_content a")
-                                    .map((idx, item) => {
-                                        const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr("href") );
-                                        return {div,id};
-                                    }).toArray();
-                        
-                        if(!$applet) {
-                            $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                            $applet.appendTo("body")
-                                    .steamCb({  idTag : "cb-1",
-                                                style : await $.get(await GM.getResourceUrl("table-style")),
-                                                theme : ".eevee",
-                                                field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                                record : {title: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+        class: 'fa fa-magic',
+        css: {'padding-left': '10px',
+              'color': 'white',
+              'font-size': '15px',
+              'line-height': '20px',
+              'cursor': 'pointer' },
+        on: {
+            mouseenter: function() {
+                $(this).animate({ deg: 360 }, {
+                            duration: 600,
+                            step: function(now) {
+                                $(this).css({ transform: `rotate(${now}deg)` });
+                            },
+                            complete: function() {
+                                $(this)[0].deg=0;
+                            }
                         }
-        
-                        $applet.steamCb("popUp")
-                                .steamCb("addTable")
-                                .steamCb("addGames", ids);
-                    }
-                } })
-    }).insertBefore($("div.steam_read_selected"));
+                );
+            },
+            click: async function() {
+                let ids = $(".steam_read_selected .item_content .name")
+                            .map((idx, item) => {
+                                const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr("href") );
+                                return {div,id};
+                            }).toArray();
+                if(!$applet) {
+                    $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
+                    $applet.appendTo("body")
+                            .steamCb({  idTag : "cb-1",
+                                        style : await $.get(await GM.getResourceUrl("table-style")),
+                                        theme : ".eevee",
+                                        field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
+                                        record : {title: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+                }
+                $applet.steamCb("popUp")
+                        .steamCb("addTable")
+                        .steamCb("addGames", ids);
+            }
+        }
+    }).appendTo($('.itcm-game-toolbox'));
 }
