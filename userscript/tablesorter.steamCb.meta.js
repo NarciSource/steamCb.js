@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         tablesorter.steamCb
 // @namespace    steamCb
-// @version      0.1.2
+// @version      0.1.2.1
 // @description  Apply the tablesorter effect to the cb-table
 // @author       narci <jwch11@gmail.com>
 // @require      http://code.jquery.com/jquery-3.3.1.min.js

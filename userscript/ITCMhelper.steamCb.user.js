@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.20
+// @version      0.1.20.1
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -85,11 +85,11 @@ $.ajax = function(url, options) {
 // Apply the tablesorter effect to the cb-table.
 $(".cb-table").tablesorter({
     textExtraction : function(node) {
-        if($(node).find("a").text() === "?") return -1;
-        return $(node).find("a").text().replace("%","");
+        if($(node).find('span').text() === "?" || $(node).find('span').text() === "-") return -1;
+        return $(node).find('span').text().replace("%","");
     },
     textSorter : {
-        "[name='ratings']" : function(a, b) {
+        '[name="ratings"]' : function(a, b) {
             const regx = /^[\w\s]+\((\d+)\)/,
                   refa = a==="-1"? -1 : regx.exec(a)[1] ,
                   refb = b==="-1"? -1 : regx.exec(b)[1] ;
