@@ -1,5 +1,5 @@
 /**
- * steamCb - v0.4.9 - 2019-02-07
+ * steamCb - v0.4.10 - 2019-02-14
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
@@ -16,7 +16,7 @@
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
-        version: "0.4.9",
+        version: "0.4.10",
         options: {
             idTag: 'defaultCb',
             theme: '.default',
@@ -245,41 +245,46 @@
             $.fn.copyToClipboard = function() {
                 if (!$.contains(document, this)) {
                     var isNotContain = true;
-                    this.each((_, el)=> $('body').append(el));
+                    $('body').append(this);
                 }
 
                 let body = document.body, range, sel;
                 if (document.createRange && window.getSelection) {
                     sel = window.getSelection();
                     sel.removeAllRanges();
-                    this.each((_, el)=> {
-                        range = document.createRange();
-                        try {
-                            range.selectNodeContents(el);
-                        } catch (e) {
-                            range.selectNode(el);
-                        } finally {
-                            sel.addRange(range);
-                        }
-                    });
+                    range = document.createRange();
+                    try {
+                        range.selectNodeContents(this.get(0));
+                    } catch (e) {
+                        range.selectNode(this.get(0));
+                    } finally {
+                        sel.addRange(range);
+                    }
                 } else if (body.createTextRange) {
                     range = body.createTextRange();
-                    this.each((_, el)=> {
-                        range.moveToElementText(el);
-                    });
+                    range.moveToElementText(this.get(0));
                     range.select();
                 }
                 document.execCommand('Copy');
                 console.info("Copied to clipboard");
 
                 if(isNotContain) {
-                    this.each((_,element)=>element.remove());
+                    this.detach();
                 }
                 return this;
             };
             $.fn.tableDirtRemoval = function() {
-                this.find('*').addBack().removeClass();
-                this.find('table').addBack('table').addClass('cb-table');
+                this.find('*').addBack()
+                        .removeClass()
+                        .removeAttr()
+                    .filter('table')
+                        .addClass('cb-table')
+                        .trigger('updateAll')
+                    .find('th')
+                        .css({  'user-select': 'text',
+                                '-moz-user-select': 'text',
+                                '-webkit-user-select': 'text',
+                                '-ms-user-select': 'text'});
                 return this;
             };
 
@@ -292,7 +297,7 @@
                     callback: function(key, options) {
                         switch(key) {
                             case "copy":
-                                this.children().map((_,each)=> $(each).clone().get())
+                                this.clone()
                                     .tableDirtRemoval()
                                     .copyToClipboard();
                                 break;
@@ -458,7 +463,7 @@
             /*------- Reset DB and stroage -------*/
             this.element.find('#cb-btn--reset')
                     .on('click', function () {
-                        $('<div/>').dialog({
+                        $('<div>').dialog({
                             title: "Warning",
                             width: 400,
                             closeText: "",
@@ -577,14 +582,15 @@
                 if (sessionStorage[`${this.options.idTag}-commands`]) {
                     this.commands = JSON.parse(sessionStorage[`${this.options.idTag}-commands`]);
 
+                    let $table;
                     this.commands.forEach(async command => {
                         switch(command) {
                             case "table": 
-                                this.addTable();
+                                $table = this.addTable();
                                 break;
                             default: 
-                                await this.addGames([{ div: command.split("/")[0],
-                                                        id: command.split("/")[1]}]);
+                                this.addGames([{ div: command.split("/")[0],
+                                                 id: command.split("/")[1]}], $table);
                                 break;
                         }
                     });
@@ -670,31 +676,25 @@
         addTable: function() {
             let that = this;
 
-            $('<table/>', {
+            return $('<table>', {
                 class: 'cb-table',
                 attr: { tabindex:0 },
                 html: $.merge(
-                    $('<thead/>', {
-                        html: $('<tr/>', {
+                    $('<thead>', {
+                        html: $('<tr>', {
                                 html: $.map( that.options.field, (text, name)=> 
-                                        $('<th/>', { name, text })
+                                        $('<th>', { name, text })
                                     )
                             })
                     }),
-                    $('<tbody/>', { /* connect sortable */
+                    $('<tbody>', { /* connect sortable */
                         class: 'cb-connectedSortable',
                         sortable: { connectWith: '.cb-connectedSortable' }
                     })
                 ),
                 on: {
                     mouseup: function() {
-                        $(this) .focus()
-                                .trigger('updateAll')
-                                .find('th')
-                                    .css({  'user-select': 'text',
-                                            '-moz-user-select': 'text',
-                                            '-webkit-user-select': 'text',
-                                            '-ms-user-select': 'text'});
+                        $(this) .focus();
                     },
                     focusin: function() { /* focus selected table */
                         that.focused_table.toggleClass('cb-tablehighlight');
@@ -721,18 +721,18 @@
                     }
                 }
             }).focusin().appendTo(this.article);
-
-            console.info("Table has been added");
         },
 
 
-        addGames: async function(gids) {
+        addGames: async function(gids, $table) {
             await this._____search_progressbar_zone_____(async()=> {
 
+                $table = $table || this.focused_table.length? this.focused_table : this.addTable();
+
                 /* make */
-                const $tr = $('<tr/>', {
+                const $tr = $('<tr>', {
                         html: $.map( this.options.record, (text, name)=> 
-                                $('<td/>', { name, text })
+                                $('<td>', { name, text })
                         )
                     }),
                     glist = await GinfoBuilder.build(gids);
@@ -747,7 +747,7 @@
 
                     /* game field */
                     $record.find(`td[name="title"]`).html( 
-                        $('<a/>', {
+                        $('<a>', {
                             href: ginfo.urls_store,
                             text: (ginfo.name? ginfo.name:ginfo.plain) + (ginfo.is_dlc===true? " (dlc)":"")}
                         )
@@ -755,10 +755,10 @@
 
                     /* img field */
                     $record.find(`td[name="img"]`).html( $.merge(
-                        $('<div/>', {
+                        $('<div>', {
                             css: {'background-image' : `url(${ginfo.urls_img})`}
                         }),
-                        $('<a/>', {
+                        $('<a>', {
                             href: ginfo.urls_store,
                             text: (ginfo.name? ginfo.name:ginfo.plain) + (ginfo.is_dlc===true? " (dlc)":"")
                         })
@@ -767,18 +767,18 @@
                     /* ratings field */
                     $record.find(`td[name="ratings"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            case null : return $('<a/>', { text: "-"});
-                            default : return $('<a/>', { text : `${val.steam.text} (${val.steam.perc_positive}%)`});
+                            case undefined : return $('<a>', { text: "?"});
+                            case null : return $('<a>', { text: "-"});
+                            default : return $('<a>', { text : `${val.steam.text} (${val.steam.perc_positive}%)`});
                         }
                     })(ginfo.reviews) );
                     
                     /* cards field */
                     $record.find(`td[name="cards"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            case false : return $('<a/>', { text: "-"});
-                            case true : return $('<a/>', {
+                            case undefined : return $('<a>', { text: "?"});
+                            case false : return $('<a>', { text: "-"});
+                            case true : return $('<a>', {
                                                     href: ginfo.urls_cards,
                                                     text: "❤"
                                                 });
@@ -788,9 +788,9 @@
                     /* achievements field */
                     $record.find(`td[name="archvment"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            case false : return $('<a/>', { text: "-"});
-                            case true : return $('<a/>', {
+                            case undefined : return $('<a>', { text: "?"});
+                            case false : return $('<a>', { text: "-"});
+                            case true : return $('<a>', {
                                                     href: ginfo.urls_archv,
                                                     text: "▨" 
                                                 });
@@ -800,8 +800,8 @@
                     /* bundles field */
                     $record.find(`td[name="bundles"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            default : return $('<a/>', {
+                            case undefined : return $('<a>', { text: "?"});
+                            default : return $('<a>', {
                                                     href: ginfo.urls.bundles,
                                                     text: val.count
                                                 });
@@ -811,8 +811,8 @@
                     /* lowest field */
                     $record.find(`td[name="lowest"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            default : return $('<a/>', {
+                            case undefined : return $('<a>', { text: "?"});
+                            default : return $('<a>', {
                                                     href: ginfo.urls.history,
                                                     text: "$"+val.price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,") 
                                                 });
@@ -822,9 +822,9 @@
                     /* lowest-detail field */
                     $record.find(`td[name="lowest_detail"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
+                            case undefined : return $('<a>', { text: "?"});
                             default : return $.merge(
-                                                $('<a/>', {
+                                                $('<a>', {
                                                     href: ginfo.urls.history,
                                                     text: "$"+val.price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")+` (${val.cut}% off)`
                                                 }),
@@ -838,8 +838,8 @@
                     /* current field */
                     $record.find(`td[name="current"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            default : return $("<a>", {
+                            case undefined : return $('<a>', { text: "?"});
+                            default : return $('<a>', {
                                                     href: val.url,
                                                     text: "$"+val.price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&,")+` (${val.cut}% off)`
                                                 });
@@ -849,8 +849,8 @@
                     /* retail field */
                     $record.find(`td[name="retail"]`).html((val => {
                         switch(val) {
-                            case undefined : return $('<a/>', { text: "?"});
-                            default : return $('<a/>', {
+                            case undefined : return $('<a>', { text: "?"});
+                            default : return $('<a>', {
                                                     href: ginfo.urls.info,
                                                     text: "$"+val.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, "$&","")
                                                 });
@@ -867,16 +867,10 @@
                         });
 
                 /* update tablesorter */
-                this.focused_table.trigger('updateAll')
-                    .find('th')
-                        .css({  'user-select': 'text',
-                                '-moz-user-select': 'text',
-                                '-webkit-user-select': 'text',
-                                '-ms-user-select': 'text'});
+                $table.trigger('updateAll');
 
                 /* Add records to the focused table. */
-                if (this.focused_table.length === 0) this.addTable();
-                this.focused_table.children('tbody').append(records);
+                $table.children('tbody').append(records);
             })
             .then(()=>console.info("Added games"))
             .catch(()=>console.warn("error"));
@@ -976,4 +970,4 @@ Zone.prototype.proc = function(callback, option) {
 };                
 Zone.prototype.simply = function() {
     return this.proc.bind(this);
-}
+};

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.20.1
+// @version      0.1.20.2
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -17,6 +17,8 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-json.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/ginfoBuilder.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/steamCb.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/tablesorter.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/exchange.js
 // @resource     popup-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/popup.html
 // @resource     side-layout https://raw.githubusercontent.com/NarciSource/steamCb.js/master/html/side.html
 // @resource     cb-style https://raw.githubusercontent.com/NarciSource/steamCb.js/master/css/cb.default.css
@@ -82,66 +84,13 @@ $.ajax = function(url, options) {
 
 'use strict';
 
-// Apply the tablesorter effect to the cb-table.
-$(".cb-table").tablesorter({
-    textExtraction : function(node) {
-        if($(node).find('span').text() === "?" || $(node).find('span').text() === "-") return -1;
-        return $(node).find('span').text().replace("%","");
-    },
-    textSorter : {
-        '[name="ratings"]' : function(a, b) {
-            const regx = /^[\w\s]+\((\d+)\)/,
-                  refa = a==="-1"? -1 : regx.exec(a)[1] ,
-                  refb = b==="-1"? -1 : regx.exec(b)[1] ;
-            return (refa < refb)? -1 : ((refa > refb)? 1 : 0);
-        }
-    }
-});
-
-// Change the amount in cb-table at the current exchange rate.
-(async function() {
-    try{
-
-    const date = new Date();    
-    date.setHours(0, 0, 0, 0);
-
-    if( localStorage["exchange"]===undefined || 
-        date > new Date(JSON.parse(localStorage["exchange"]).date) ) {
-
-        const exchange = await $.get(await GM.getResourceUrl("exchange-api"));
-
-        localStorage["exchange"] = JSON.stringify({ date, exchange });
-    }
-
-
-    const exchange = JSON.parse(localStorage["exchange"]).exchange;
-    $(".cb-table td")
-        .filter((_, item)=> item.innerText.includes("$"))
-        .each((_, item)=> {
-            let innerHTML = item.innerHTML,
-                [match, num] = /\$\s*(\d+\.\d+)/.exec(innerHTML);
-            num = (Number(num) * exchange.USDKRW[0])
-                    .toFixed(0)
-                    .replace(/\d{2}\b/g, '00')
-                    .replace(/\d(?=(\d{3})+(?!\d))/g, '$&,');
-            item.innerHTML = innerHTML.replace(/\$(\s*)\d+\.\d+/g, "₩$1"+num);
-    });
-
-    }catch(e) {
-        console.warn(e);
-    }
-})();
-
-
-
-
 // Add stylesheet
 const addStyle = async function(resource_url) {
-    $("<link>", {
-        rel : "stylesheet",
-        type : "text/css",
+    $('<link>', {
+        rel : 'stylesheet',
+        type : 'text/css',
         href : await GM.getResourceUrl(resource_url)
-    }).appendTo("head");
+    }).appendTo('head');
 };
 addStyle("cb-style");
 addStyle("ts-style");
@@ -158,19 +107,19 @@ addStyle("ms-style");
     $side.steamCb({ idTag : "cb-0",
                     hyperlink : false,
                     style : await $.get(await GM.getResourceUrl("table-style")),
-                    theme : ".itcm",
+                    theme : '.itcm',
                     field : {title: "Game", cards: "C", archvment: "A", bundles: "B", lowest: "Lowest"},
                     record : {title: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?"} });
 
-    $("div.column_login").after($side);
+    $('div.column_login').after($side);
 })();
 
 
 
 // Create a pop-up access button at the to
 var $applet = undefined;
-$("<li/>", {
-    html: $("<a/>", {
+$('<li>', {
+    html: $('<a>', {
             class: 'login_A',
             style: 'cursor:pointer',
             text: "차트만들기"}),
@@ -178,11 +127,11 @@ $("<li/>", {
         click: async function() {
             if(!$applet) {
                     $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                    $applet.appendTo("body")
+                    $applet.appendTo('body')
                             .steamCb({  idTag : "cb-1",
                                         hyperlink : false,
                                         style : await $.get(await GM.getResourceUrl("table-style")),
-                                        theme : ".eevee",
+                                        theme : '.eevee',
                                         field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
                                         record : {title: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                 }
@@ -190,7 +139,7 @@ $("<li/>", {
             $applet.steamCb("popUp");
         }
     }
-}).prependTo($("ul.wrap_login div"));
+}).prependTo($('ul.wrap_login div'));
 
 
 // Extract the game list of ITCM.
@@ -207,7 +156,7 @@ if( $('div.steam_read_selected').length) {
         }).insertBefore($('div.steam_read_selected'));
     }
 
-    $("<div/>", {
+    $('<div>', {
         class: 'fa fa-magic',
         css: {'padding-left': '10px',
               'color': 'white',
@@ -228,17 +177,17 @@ if( $('div.steam_read_selected').length) {
                 );
             },
             click: async function() {
-                let ids = $(".steam_read_selected .item_content .name")
+                let ids = $('.steam_read_selected .item_content .name')
                             .map((idx, item) => {
-                                const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr("href") );
+                                const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr('href') );
                                 return {div,id};
                             }).toArray();
                 if(!$applet) {
                     $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                    $applet.appendTo("body")
+                    $applet.appendTo('body')
                             .steamCb({  idTag : "cb-1",
                                         style : await $.get(await GM.getResourceUrl("table-style")),
-                                        theme : ".eevee",
+                                        theme : '.eevee',
                                         field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
                                         record : {title: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
                 }

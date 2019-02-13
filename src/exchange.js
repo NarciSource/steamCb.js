@@ -1,6 +1,6 @@
 // @description  Change the amount in cb-table at the current exchange rate.
 // @connect      earthquake.kr
-(async function() {
+;(async function() {
     const exchange_api = "https://earthquake.kr:23490/query/USDKRW",
           date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -15,7 +15,7 @@
 
 
     const exchange = JSON.parse(localStorage["exchange"]).exchange;
-    $(".cb-table td")
+    $('.cb-table td')
         .filter((_, item)=> item.innerText.includes("$"))
         .each((_, item)=> {
             let innerHTML = item.innerHTML,

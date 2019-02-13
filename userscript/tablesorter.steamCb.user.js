@@ -32,8 +32,8 @@ addStyle("ts-style");
 // Apply the tablesorter effect to the cb-table.
 $(".cb-table").tablesorter({
     textExtraction : function(node) {
-        if($(node).find('span').text() === "?" || $(node).find('span').text() === "-") return -1;
-        return $(node).find('span').text().replace("%","");
+        if($(node).find('a').text() === "?" || $(node).find('a').text() === "-") return -1;
+        return $(node).find('a').text().replace("%","");
     },
     textSorter : {
         '[name="ratings"]' : function(a, b) {
