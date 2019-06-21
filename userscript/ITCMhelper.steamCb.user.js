@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.20.2
+// @version      0.1.20.3
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -36,7 +36,7 @@
 // @license      MIT
 // ==/UserScript==
 
-
+;(function ($, window, document, undefined) {
 // Greasemonkey is a sandbox, but not tempermonkey, jquery crash prevention.
 this.$ = window.jQuery.noConflict(true);
 
@@ -115,6 +115,16 @@ addStyle("ms-style");
 })();
 
 
+async function makeApplet() {
+    return $(await $.get(await GM.getResourceUrl("popup-layout")))
+            .appendTo('body')
+            .steamCb({  idTag : "cb-1",
+                        hyperlink : false,
+                        style : await $.get(await GM.getResourceUrl("table-style")),
+                        theme : '.eevee',
+                        field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
+                        record : {title: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
+};
 
 // Create a pop-up access button at the to
 var $applet = undefined;
@@ -125,36 +135,26 @@ $('<li>', {
             text: "차트만들기"}),
     on: {
         click: async function() {
-            if(!$applet) {
-                    $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                    $applet.appendTo('body')
-                            .steamCb({  idTag : "cb-1",
-                                        hyperlink : false,
-                                        style : await $.get(await GM.getResourceUrl("table-style")),
-                                        theme : '.eevee',
-                                        field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                        record : {title: "?", ratings: "-", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
-                }
+            $applet = $applet || await makeApplet();
 
             $applet.steamCb("popUp");
         }
     }
-}).prependTo($('ul.wrap_login div'));
+}).appendTo($('.wrap_login').children('div'));
 
 
 // Extract the game list of ITCM.
-if( $('div.steam_read_selected').length) {
-    if( $('.itcm-game-toolbox').length === 0) {
-        $('<div>', {
-            class: 'itcm-game-toolbox',
-            css: {'display': 'flex',
-                  'position': 'absolute',
-                  'margin': '0px 0px 0px 735px',
-                  'padding': '5px 10px 3px 0px',
-                  'background': 'rgb(51, 51, 51)',
-                  'border-radius': '0px 20px 20px 0px' }
-        }).insertBefore($('div.steam_read_selected'));
-    }
+$('div.steam_read_selected').each(()=> {
+
+    $('<div>', {
+        class: 'itcm-game-toolbox',
+        css: {'display': 'flex',
+                'position': 'absolute',
+                'margin': '0px 0px 0px 735px',
+                'padding': '5px 10px 3px 0px',
+                'background': 'rgb(51, 51, 51)',
+                'border-radius': '0px 20px 20px 0px' }
+    }).insertBefore($('div.steam_read_selected'));
 
     $('<div>', {
         class: 'fa fa-magic',
@@ -167,34 +167,25 @@ if( $('div.steam_read_selected').length) {
             mouseenter: function() {
                 $(this).animate({ deg: 360 }, {
                             duration: 600,
-                            step: function(now) {
-                                $(this).css({ transform: `rotate(${now}deg)` });
-                            },
-                            complete: function() {
-                                $(this)[0].deg=0;
-                            }
+                            step: function(now) { $(this).css({ transform: `rotate(${now}deg)` }) },
+                            complete: function() { $(this)[0].deg=0 }
                         }
                 );
             },
             click: async function() {
-                let ids = $('.steam_read_selected .item_content .name')
+                let gids = $('.steam_read_selected .item_content .name')
                             .map((idx, item) => {
                                 const [match, div, id] = /steampowered\.com\/(\w+)\/(\d+)/.exec( $(item).attr('href') );
                                 return {div,id};
                             }).toArray();
-                if(!$applet) {
-                    $applet = $(await $.get(await GM.getResourceUrl("popup-layout")));
-                    $applet.appendTo('body')
-                            .steamCb({  idTag : "cb-1",
-                                        style : await $.get(await GM.getResourceUrl("table-style")),
-                                        theme : '.eevee',
-                                        field : {title: "Game", ratings: "Ratings", cards: "Cards", archvment: "Archv", bundles: "BDL", lowest: "Lowest", retail: "Retail"},
-                                        record : {title: "?", ratings: "?", cards: "?", archvment: "?", bundles: "?", lowest: "?", retail: "?"} });
-                }
+
+                $applet = $applet || await makeApplet();
                 $applet.steamCb("popUp")
-                        .steamCb("addTable")
-                        .steamCb("addGames", ids);
+                        .steamCb("addTable");
+                $applet.steamCb("addGames", gids);
             }
         }
     }).appendTo($('.itcm-game-toolbox'));
-}
+});
+
+})( jQuery, window, document);

@@ -1,6 +1,6 @@
 // @description  Apply the tablesorter effect to the cb-table.
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.1/js/jquery.tablesorter.min.js
-;(async function() {
+;(async function($) {
     await $("<link>", {
         rel : "stylesheet",
         type : "text/css",
@@ -26,4 +26,4 @@
     /* The tablesorter's default theme interferes with my theme. Damn */
     $(".cb-table").find('th').css({'background-color':'transparent'})
     $(".cb-table").find('td').css({'vertical-align':'inherit'});
-})();
+})($);
