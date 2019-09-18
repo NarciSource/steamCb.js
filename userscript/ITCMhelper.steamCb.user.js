@@ -38,8 +38,6 @@
 // ==/UserScript==
 
 ;(function ($, window, document, undefined) {
-// Greasemonkey is a sandbox, but not tempermonkey, jquery crash prevention.
-this.$ = window.jQuery.noConflict(true);
 
 // Overwrite GM.xmlHttpRequest in $.ajax to avoid Access-Control-Allow-Origin.
 const originAjax = $.ajax;
