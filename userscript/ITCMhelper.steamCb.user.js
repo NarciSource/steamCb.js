@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.20.3
+// @version      0.1.21
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
@@ -15,6 +15,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/ace.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-css.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.2/mode-json.js
+// @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/dbs.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/ginfoBuilder.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/steamCb.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/src/tablesorter.js
@@ -57,7 +58,7 @@ $.ajax = function(url, options) {
     GM.xmlHttpRequest( $.extend( {}, options, {
         method: "GET",
         onload: response => {
-            const headerRegex = /([\w-]+): (.*)/gi;
+            const headerRegex = /([\w-]+): (.*)/gi,
                   mimeRegex = /(^\w+)\/(\w+)/g;
 
             let headers = {}, match;
@@ -101,8 +102,7 @@ addStyle("ms-style");
 
 
 
-// Create a side applet
-(async function() {
+(async function makeSideApplet() {
     let $side = $(await $.get(await GM.getResourceUrl("side-layout")));
     $side.steamCb({ idTag : "cb-0",
                     hyperlink : false,
@@ -158,6 +158,7 @@ $('div.steam_read_selected').each(()=> {
 
     $('<div>', {
         class: 'fa fa-magic',
+        title: 'Make a chart with steamCb.',
         css: {'padding-left': '10px',
               'color': 'white',
               'font-size': '15px',

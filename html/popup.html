@@ -8,26 +8,26 @@
                     <option value="sub">Package</option>
                     <option value="bundle">Bundle</option>
                 </select>
-                <i id="cb-search__icon" class="fa fa-search"/>
-                <input type="search" id="cb-search__bar" placeholder="Search..."/>
+                <i id="cb-search__icon" class="fa fa-search" title="Click or press enter"/>
+                <input type="search" id="cb-search__bar" placeholder="Search..."/ title="Search by game name or appid. The separator is comma(',').">
             </span>
-                
+
             <div class="cb-toolbox">
-                <i id="cb-btn--setting-in" class="fa fa-cog"/>
+                <i id="cb-btn--setting-in" class="fa fa-cog" title="Setting"/>
             </div>
         </div>
-        
-    
+
+
         <div class="cb-article cb-connectedSortable"/>
-    
-    
+
+
         <div class="cb-aside">
             <div class="cb-sel-style">
                 <p class="cb-caption">TableStyle</p>
                 <select id="cb-sel-style__select"/>
             </div>
-    
-            <table class="cb-trashbox">
+
+            <table class="cb-trashbox" title="Drag the table or record here. If you click on the margin, empty the trash.">
                 <caption class="cb-caption">Trashbox</caption>
                 <tbody class="cb-trashbox__body cb-connectedSortable">
                     <tr class="cb-sortable-disabled"><td>-</td></tr>
@@ -38,21 +38,21 @@
                 </tbody>
             </table>
         </div>
-    
-    
+
+
         <div class="cb-message">
             <input type="checkbox" checked>
         </div>
     </div>
-    
+
 
     <div class="cb-setting">
         <div class="cb-header">
             <p class="cb-title">Setting</p>
             <div class="cb-setting__progressbar"/>
             <div class="cb-toolbox">
-                <i id="cb-btn--save" class="fa fa-floppy-o"/>
-                <i id="cb-btn--setting-out" class="fa fa-sign-out"/>
+                <i id="cb-btn--save" class="fa fa-floppy-o" title="Save settings."/>
+                <i id="cb-btn--setting-out" class="fa fa-sign-out" title="Back to main."/>
             </div>
         </div>
         <div class="cb-setting__article">
@@ -66,25 +66,25 @@
                 </li>
                 <li>
                     <fieldset class="cb-setting__option__box">
-                        <legend class="cb-caption">Field markup</legend>
+                        <legend class="cb-caption" title="Supported columns are title, img, cards, archvment, ratings, bundles, lowest, lowest_detail, current and retail.">Field markup</legend>
                         <div id="cb-setting__option--field" class="cb-textarea"/>
                     </fieldset>
                 </li>
                 <li>
                     <fieldset class="cb-setting__option__box">
-                        <legend class="cb-caption">Record markup</legend>
+                        <legend class="cb-caption" title="Supported columns are title, img, cards, archvment, ratings, bundles, lowest, lowest_detail, current and retail.">Record markup</legend>
                         <div id="cb-setting__option--record" class="cb-textarea"/>
                     </fieldset>
                 </li>
                 <li>
                     <fieldset class="cb-setting__option__box">
-                        <legend class="cb-caption">Table stylesheet</legend>
+                        <legend class="cb-caption" title="Decorate the table design.">Table stylesheet</legend>
                         <div id="cb-setting__option--styleSheet" class="cb-textarea"/>
                     </fieldset>
                 </li>
             </ul>
 
-            <i id="cb-btn--reset" class="fa fa-database"/>
+            <i id="cb-btn--reset" class="fa fa-database" title="Reset the database."/>
         </div>
     </div>
 </div>

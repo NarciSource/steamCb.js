@@ -657,7 +657,8 @@
                     open: function(event, ui) {
                         $(this).parent().find('.cb-dialog-titlebar')
                             .append($('<i>', {
-                                class: 'fa fa-steam cb-dialog-titlebar__steam-icon'
+                                class: 'fa fa-steam cb-dialog-titlebar__steam-icon',
+                                title: "version: " + that.version
                             }));
                         $(this).parent().find('.ui-icon-closethick').switchClass('ui-icon ui-icon-closethick','cb-icon-closethick fa fa-times',0);
                     },
@@ -763,15 +764,6 @@
                             text: (ginfo.name? ginfo.name:ginfo.plain) + (ginfo.is_dlc===true? " (dlc)":"")
                         })
                     ));
-
-                    /* ratings field */
-                    $record.find(`td[name="ratings"]`).html((val => {
-                        switch(val) {
-                            case undefined : return $('<a>', { text: "?"});
-                            case null : return $('<a>', { text: "-"});
-                            default : return $('<a>', { text : `${val.steam.text} (${val.steam.perc_positive}%)`});
-                        }
-                    })(ginfo.reviews) );
                     
                     /* cards field */
                     $record.find(`td[name="cards"]`).html((val => {
@@ -795,8 +787,17 @@
                                                     text: "▨" 
                                                 });
                         }
-                    })(ginfo.achievements) );
-                    
+                    })(ginfo.achievements));
+
+                    /* ratings field */
+                    $record.find(`td[name="ratings"]`).html((val => {
+                        switch (val) {
+                            case undefined: return $('<a>', { text: "?" });
+                            case null: return $('<a>', { text: "-" });
+                            default: return $('<a>', { text: `${val.steam.text} (${val.steam.perc_positive}%)` });
+                        }
+                    })(ginfo.reviews));
+
                     /* bundles field */
                     $record.find(`td[name="bundles"]`).html((val => {
                         switch(val) {
