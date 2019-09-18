@@ -118,15 +118,6 @@ GinfoBuilder = (function() {
             }
         };
 
-    var idxDB = new EasyIndexedDB({
-            dbName: "ginfoDB",
-            version: 3,
-            primaryKey: "id",
-            defaultTable: "app",
-            tables: ["app", "dlc", "sub", "bundle"],
-            //candidateKey = "plain"
-        });
-
 
     /** @function    initLoad (async)
      *  @description Load init data.
