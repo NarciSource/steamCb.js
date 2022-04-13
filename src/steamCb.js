@@ -636,7 +636,7 @@ var saveToShotlyStorage = saveTo(sessionStorage),
                     this.searchList = { app: await idxDB.readAll("app",dataType),
                                         sub: await idxDB.readAll("sub",dataType),
                                         bundle: await idxDB.readAll("bundle",dataType) };
-                    saveToBasicStorage("searchList")(JSON.stringify( this.searchList ));
+                    //saveToBasicStorage("searchList")(JSON.stringify( this.searchList ));
 
                 } else {
                     this.searchList = JSON.parse(this.searchList);
@@ -836,6 +836,7 @@ var saveToShotlyStorage = saveTo(sessionStorage),
                     /* lowest field */
                     $record.find(`td[name="lowest"]`).html((val => {
                         switch(val) {
+                            case null :
                             case undefined : return $('<a>', { text: "?"});
                             default : return $('<a>', {
                                                     href: ginfo.urls.history,
@@ -847,6 +848,7 @@ var saveToShotlyStorage = saveTo(sessionStorage),
                     /* lowest-detail field */
                     $record.find(`td[name="lowest_detail"]`).html((val => {
                         switch(val) {
+                            case null :
                             case undefined : return $('<a>', { text: "?"});
                             default : return $.merge(
                                                 $('<a>', {
@@ -863,6 +865,7 @@ var saveToShotlyStorage = saveTo(sessionStorage),
                     /* current field */
                     $record.find(`td[name="current"]`).html((val => {
                         switch(val) {
+                            case null :
                             case undefined : return $('<a>', { text: "?"});
                             default : return $('<a>', {
                                                     href: val.url,
@@ -874,6 +877,7 @@ var saveToShotlyStorage = saveTo(sessionStorage),
                     /* retail field */
                     $record.find(`td[name="retail"]`).html((val => {
                         switch(val) {
+                            case null :
                             case undefined : return $('<a>', { text: "?"});
                             default : return $('<a>', {
                                                     href: ginfo.urls.info,
