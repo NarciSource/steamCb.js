@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         ITCMhelper.steamCb
 // @namespace    steamCb
-// @version      0.1.22
+// @version      0.1.23
 // @description  Load steam game information and make charts.
 // @author       narci <jwch11@gmail.com>
 // @match        *://itcm.co.kr/*
 // @icon         https://raw.githubusercontent.com/NarciSource/steamCb.js/master/img/cb-icon.png
 // @require      http://code.jquery.com/jquery-3.3.1.min.js
 // @require      http://code.jquery.com/ui/1.12.1/jquery-ui.min.js
+// @require      http://cdnjs.cloudflare.com/ajax/libs/ramda/0.25.0/ramda.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.1/js/jquery.tablesorter.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.8.0/jquery.contextMenu.js
 // @require      https://raw.githubusercontent.com/NarciSource/steamCb.js/master/vendor/require.js

@@ -2,6 +2,7 @@
  * steamCb - v0.4.10 - 2019-02-14
  * @requires jQuery v3.3.1+ (https://api.jquery.com/)
  * @requires jQuery-ui v1.12.1+ (https://api.jqueryui.com/)
+ * @requires ramda v0.25.0 (https://ramdajs.com/)
  * @requires require v2.3.6 (https://requirejs.org/docs/)
  * @requires ace v1.4.2 (https://ace.c9.io/)
  * @requires tablesorter v2.31.1 (https://mottie.github.io/tablesorter/docs/)
@@ -13,6 +14,29 @@
  * Copyright 2018-2019. Narci. all rights reserved.
  * Licensed under the MIT license
  */
+
+
+ /* various storages */
+var saveTo = R.curry((storage, name, value) => storage.setItem(name, (typeof value === "object") ? JSON.stringify(value) : value)),
+    loadFrom = R.curry((storage, name) => storage.getItem(name)),
+    deleteFrom = R.curry((storage, name) => storage.removeItem(name)),
+    clearTo = R.curry((storage, _) => storage.clear());
+
+var saveToShotlyStorage = saveTo(sessionStorage),
+    loadFromShotlyStorage = loadFrom(sessionStorage),
+    deleteFromShotlyStorage = deleteFrom(sessionStorage),
+    clearToShotlyStorage = clearTo(sessionStorage),
+
+    saveToBasicStorage = saveTo(localStorage),
+    loadFromBasicStorage = loadFrom(localStorage),
+    deleteFromBasicStorage = deleteFrom(localStorage),
+    clearToBasicStorage = clearTo(localStorage),
+
+    saveToHugeStorage = saveTo(GM),
+    loadFromHugeStorage = loadFrom(GM),
+    deleteFromHugeStorage = deleteFrom(GM);
+
+
 
  ;(function ($, window, document, undefined) {
     $.widget( "nar.steamCb", {
@@ -54,9 +78,9 @@
                 }).simply();
 
 
-            /* priority: localStorage(user) > create option(code) */
-            this._downloadLocalStorage();
-            this._updateLocalStorage();
+            /* priority: storage(user) > create option(code) */
+            this._downloadStorage();
+            this._updateStorage();
 
 
             this._setEvent();
@@ -202,7 +226,7 @@
             this.element.find('#cb-sel-style__select')
                     .on('click', function() {
                         that.options.theme = this.value;
-                        that._updateLocalStorage(); })
+                        that._updateStorage(); })
                     .on('change', function() {
                         console.info(`The table theme changed to ${this.value}`)});
 
@@ -210,7 +234,7 @@
             /*------- Hides/show the article -------*/
             (function ($btnShow, $article) {
                 if( $btnShow.length === 0 ) return;
-                if( localStorage["side-show"] === "hide" ) {
+                if (loadFromBasicStorage("side-show") === "hide" ) {
                     $btnShow.switchClass('fa-plus-circle', 'fa-minus-circle');
                     $article.hide();
                 } else {
@@ -222,10 +246,10 @@
                     $(this).toggleClass('fa-plus-circle fa-minus-circle');
                     if($(this).hasClass('fa-plus-circle')) {
                         $article.show();
-                        localStorage["side-show"] = "show";
+                        saveToBasicStorage("side-show")("show");
                     } else {
                         $article.hide();
-                        localStorage["side-show"] = "hide";
+                        saveToBasicStorage("side-show")("hide");
                     }
                 })
             })(this.element.find('#cb-btn--show'), this.article);
@@ -451,7 +475,7 @@
                             this.options.field = JSON.parse( this.editors.field.getValue() );
                             this.options.record = JSON.parse( this.editors.record.getValue() );
                             
-                            this._updateLocalStorage();    
+                            this._updateStorage();    
                         }, {
                             mintime:1000*1
                         }).then(()=>console.info("Saved setting"));
@@ -489,8 +513,8 @@
                                 Okay: {
                                     click: function() {
                                         idxDB.clear();
-                                        sessionStorage.clear();
-                                        localStorage.clear();
+                                        clearToShotlyStorage();
+                                        clearToBasicStorage();
                                         location.reload();
                                     },
                                     text: "Okay",
@@ -550,7 +574,7 @@
 
 
 
-            /*------- Record $article's contents in sessionStorage -------*/
+            /*------- Record $article's contents in storage -------*/
             let observer = new MutationObserver(function(mutations) {
                     that.commands = [];
                     that.article.find('table.cb-table').each((_, table) => {
@@ -558,7 +582,7 @@
                         $(table).find('tbody tr').each((_, tr) =>
                             that.commands.push($(tr).attr('gid')) );
                     });
-                    sessionStorage[`${that.options.idTag}-commands`] = JSON.stringify(that.commands);
+                    saveToShotlyStorage(`${that.options.idTag}-commands`)(JSON.stringify( that.commands ));
                     
                     //mutations.forEach(function(mutation) {
                     //  console.log(mutation);
@@ -579,8 +603,8 @@
 
                 /* Return previous memory */
                 console.info("preheat: Loading previous table.");
-                if (sessionStorage[`${this.options.idTag}-commands`]) {
-                    this.commands = JSON.parse(sessionStorage[`${this.options.idTag}-commands`]);
+                if (loadFromShotlyStorage(`${this.options.idTag}-commands`)) {
+                    this.commands = JSON.parse(loadFromShotlyStorage(`${this.options.idTag}-commands`));
 
                     let $table;
                     this.commands.forEach(async command => {
@@ -599,7 +623,7 @@
                 
                 /* Load search list */
                 console.info("preheat: Loading Search list.")
-                this.searchList = localStorage["searchList"];
+                this.searchList = await loadFromHugeStorage("searchList");
                 if(!this.searchList) {
                     const dataType = function(value) {
                         if(value.name === undefined) {
@@ -612,7 +636,7 @@
                     this.searchList = { app: await idxDB.readAll("app",dataType),
                                         sub: await idxDB.readAll("sub",dataType),
                                         bundle: await idxDB.readAll("bundle",dataType) };
-                    localStorage["searchList"] = JSON.stringify(this.searchList);
+                    saveToBasicStorage("searchList")(JSON.stringify( this.searchList ));
 
                 } else {
                     this.searchList = JSON.parse(this.searchList);
@@ -625,13 +649,13 @@
             .catch(e=>console.warn(e));
         },
         
-        _downloadLocalStorage: function() {
-            if( localStorage[ this.options.idTag ] )
-                this.options = JSON.parse( localStorage[ this.options.idTag ] );
+        _downloadStorage: function() {
+            if (loadFromBasicStorage( this.options.idTag ) )
+                this.options = JSON.parse(loadFromBasicStorage(this.options.idTag));
         },
 
-        _updateLocalStorage: function() {
-            localStorage[ this.options.idTag ] = JSON.stringify( this.options );
+        _updateStorage: function () {
+            saveToBasicStorage(this.options.idTag)(JSON.stringify(this.options));
         },
 
 
@@ -665,7 +689,7 @@
                     resizeStop: function() {
                         that.options.width = $(this).width();
                         that.options.height = $(this).height();
-                        that._updateLocalStorage();
+                        that._updateStorage();
                     }
                 });
         },
